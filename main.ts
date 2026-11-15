@@ -83,5 +83,8 @@ writeFileSync(
 const totalImpliedB = (radar.total_implied_usd / 1e9).toFixed(2);
 process.stdout.write(
   `token radar: scored ${board.length} pre-token protocols (${snapshot.watchlist.length}/${snapshot.watchlist.length} watchlist covered), total implied value $${totalImpliedB}B, ${radar.live_size} live-token protocols set aside\n` +
+    `Top 5:\n` +
+    board.slice(0, 5).map(r => `  #${r.rank} ${r.name.padEnd(20)} $${(r.implied_value_usd/1e6).toFixed(1)}M`).join('\n') + `\n` +
+    `Confidence: high: ${radar.stats.confidence_counts.high}, medium: ${radar.stats.confidence_counts.medium}, low: ${radar.stats.confidence_counts.low}\n` +
     `token radar: output written to ${out}: board.json, data.js, dashboard/ (${dashFiles.length} files), screenshots/ (${shots.length} images), dossier.json\n`,
 );

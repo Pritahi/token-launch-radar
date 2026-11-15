@@ -32,6 +32,24 @@
     D.board_size + ' pre-token ranked · ' + D.watchlist_covered + '/' + D.watchlist_size + ' watchlist';
   document.getElementById('foot-source').textContent = 'Source: ' + D.source;
 
+  // ---------- keyboard ----------
+  document.addEventListener('keydown', function(e) {
+    if (e.key === '/') {
+      var q = document.getElementById('f-q');
+      if (q && document.activeElement !== q) {
+        e.preventDefault();
+        q.focus();
+      }
+    } else if (e.key === 'Escape') {
+      var q = document.getElementById('f-q');
+      if (q && document.activeElement === q) {
+        q.value = '';
+        q.dispatchEvent(new Event('input'));
+        q.blur();
+      }
+    }
+  });
+
   // ---------- routing ----------
   function parseHash() {
     var h = location.hash || '#/board';
@@ -127,6 +145,7 @@
     var filters =
       '<div class="filters">' +
       '<input type="search" id="f-q" placeholder="Search name or slug" value="' + esc(st.q) + '" aria-label="Search">' +
+      '<span class="chip">/ to search</span>' +
       '<select id="f-cat" aria-label="Category">' + catOpts + '</select>' +
       '<select id="f-chain" aria-label="Chain">' + chainOpts + '</select>' +
       '<select id="f-tvl" aria-label="Minimum TVL">' + tvlOpts + '</select>' +
@@ -241,9 +260,17 @@
 
   function renderDetail(slug) {
     setNav('board');
-    var r = null;
-    for (var i = 0; i < D.rows.length; i++) if (D.rows[i].slug === slug) { r = D.rows[i]; break; }
+    var r = null, idx = -1;
+    for (var i = 0; i < D.rows.length; i++) if (D.rows[i].slug === slug) { r = D.rows[i]; idx = i; break; }
     if (!r) { view.innerHTML = '<div class="panel"><p>Unknown protocol slug: ' + esc(slug) + '</p><p class="backrow"><a href="#/board">Back to the board</a></p></div>'; return; }
+    
+    var prev = idx > 0 ? D.rows[idx - 1] : null;
+    var next = idx < D.rows.length - 1 ? D.rows[idx + 1] : null;
+    var nav = '<div class="nav-links">' +
+      (prev ? '<a href="#/protocol/' + esc(prev.slug) + '">← Rank #' + prev.rank + ' ' + esc(prev.name) + '</a>' : '<span>← First</span>') +
+      (next ? '<a href="#/protocol/' + esc(next.slug) + '">Rank #' + next.rank + ' ' + esc(next.name) + ' →</a>' : '<span>Last →</span>') +
+      '</div>';
+      
     var m = r.model || {};
     var base = m.base || 0, afterMom = base * (m.momentum || 1), afterAge = afterMom * (m.age_boost || 1);
     var max = Math.max(afterAge, r.implied_value_usd);
@@ -255,6 +282,7 @@
     view.innerHTML =
       '<div class="hero">' +
       '<div class="crumbs"><a href="#/board">Board</a> / ' + esc(r.category || '-') + ' / ' + esc(r.slug) + '</div>' +
+      nav +
       '<h2>' + esc(r.name) + wlTag(r) + '</h2>' +
       '<div class="sub">' + esc(r.category || '-') + ' · ' + esc((r.chains || []).join(', ')) + ' · rank #' + r.rank + ' of ' + D.rows.length + '</div>' +
       '<div class="big">' + fmtUSD(r.implied_value_usd) + '</div>' +
@@ -298,6 +326,11 @@
       '<p class="note">Every number is computed from the sealed snapshot at build time; nothing is hardcoded per protocol. ' +
       'Global fallback multiple: ' + D.global_median_multiple.toFixed(3) + ' (median over all tokened protocols with TVL ≥ $10M). ' +
       'Pre-token means the snapshot records no token: gecko_id and symbol are both empty.</p></div>' +
+      '<div class="panel"><h3>Board stats</h3>' +
+      '<ul><li>Q1 implied value: ' + fmtUSD(D.stats.q1_implied_usd) + '</li>' +
+      '<li>Median implied value: ' + fmtUSD(D.stats.median_implied_usd) + '</li>' +
+      '<li>Q3 implied value: ' + fmtUSD(D.stats.q3_implied_usd) + '</li>' +
+      '<li>Confidence: ' + D.stats.confidence_counts.high + ' High, ' + D.stats.confidence_counts.medium + ' Medium, ' + D.stats.confidence_counts.low + ' Low</li></ul></div>' +
       '<div class="panel"><h3>Category multiples (' + cats.length + ' categories)</h3>' +
       '<table class="plain"><thead><tr><th>Category</th><th class="num">Tokened with TVL ≥ $10M</th><th class="num">Median mcap/TVL</th><th>Basis</th></tr></thead><tbody>' +
       rows + '</tbody></table></div>' +

@@ -53,9 +53,10 @@ table.board thead th{position:sticky;top:0;background:var(--panel2);color:var(--
 table.board thead th.num,table.board td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
 table.board thead th.sorted-asc::after{content:" ▲";color:var(--accent)}
 table.board thead th.sorted-desc::after{content:" ▼";color:var(--accent)}
+table.board thead th.sorted-asc,table.board thead th.sorted-desc{border-bottom:2px solid var(--accent)}
 table.board tbody td{padding:8px 12px;border-bottom:1px solid rgba(29,50,82,.5);white-space:nowrap}
 table.board tbody tr:nth-child(even){background:rgba(13,26,46,.55)}
-table.board tbody tr:hover{background:rgba(52,245,162,.07);cursor:pointer}
+table.board tbody tr:hover{background:rgba(52,245,162,.07);cursor:pointer;box-shadow:inset 2px 0 0 var(--accent)}
 .pos{color:var(--accent)} .neg{color:var(--red)}
 .namecell{font-weight:600}
 .wl{font-size:10px;border:1px solid var(--amber);color:var(--amber);border-radius:4px;padding:1px 4px;margin-left:6px;vertical-align:middle}
@@ -65,6 +66,7 @@ table.board tbody tr:hover{background:rgba(52,245,162,.07);cursor:pointer}
 
 .hero{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;margin-bottom:16px}
 .hero .crumbs{margin-bottom:12px;font-size:13px}
+.hero .nav-links{display:flex;justify-content:space-between;margin-bottom:12px;font-size:13px}
 .hero h2{font-size:26px}
 .hero .sub{color:var(--dim);margin-top:4px}
 .hero .big{font-family:var(--mono);font-size:40px;color:var(--accent);margin:12px 0 2px}

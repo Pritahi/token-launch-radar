@@ -83,6 +83,13 @@ export interface CategoryMedianInfo {
   fallback: boolean;
 }
 
+export interface Stats {
+  q1_implied_usd: number;
+  median_implied_usd: number;
+  q3_implied_usd: number;
+  confidence_counts: { high: number; medium: number; low: number };
+}
+
 export interface RadarData {
   as_of: string;
   source: string;
@@ -95,6 +102,7 @@ export interface RadarData {
   total_implied_usd: number;
   global_median_multiple: number;
   category_medians: Record<string, CategoryMedianInfo>;
+  stats: Stats;
   rows: BoardRow[];
   live: LiveRow[];
 }
@@ -439,6 +447,17 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
 
   const totalImplied = board.reduce((sum, r) => sum + r.implied_value_usd, 0);
 
+  const vals = board.map((r) => r.implied_value_usd).sort((a, b) => a - b);
+  const stats: Stats = {
+    q1_implied_usd: vals[Math.floor(vals.length * 0.25)]!,
+    median_implied_usd: vals[Math.floor(vals.length * 0.5)]!,
+    q3_implied_usd: vals[Math.floor(vals.length * 0.75)]!,
+    confidence_counts: { high: 0, medium: 0, low: 0 },
+  };
+  for (const r of board) {
+    stats.confidence_counts[r.confidence]++;
+  }
+
   const radar: RadarData = {
     as_of: snapshot.as_of,
     source: snapshot.source,
@@ -451,6 +470,7 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
     total_implied_usd: totalImplied,
     global_median_multiple: globalMedian,
     category_medians: categoryMediansObj,
+    stats,
     rows: board,
     live,
   };
