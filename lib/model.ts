@@ -1,15 +1,51 @@
-// Token Launch Radar Model (Phase 1 implementation)
-//
-// Input: snapshot (protocols, watchlist, as_of, floor_usd)
-// Output: ranked board of 342 pre-token protocols, plus full radar data script.
-//
-// Implied Value Model:
-//   base      = tvl_usd * mult(category)
-//   momentum  = 1 + 0.5 * clamp(change_7d or 0, -25, 50) / 100      (0.875 .. 1.25)
-//   ageBoost  = 1 + 0.5 * ln(1 + days_since_listed / 365)           (listed_at null -> 0 days)
-//   implied   = clamp(round(base * momentum * ageBoost), 5_000_000, 50_000_000_000)
-//
-// Where mult(category) is computed from tokened protocols in the snapshot with tvl_usd >= 10M.
+function fnv1a(str: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function getRanks(items: {slug: string, implied: number}[]): number[] {
+  const sorted = [...items].sort((a, b) => b.implied - a.implied);
+  const ranks = new Map<string, number>();
+  
+  let i = 0;
+  while(i < sorted.length) {
+    let j = i;
+    while(j < sorted.length && sorted[j]!.implied === sorted[i]!.implied) {
+      j++;
+    }
+    const avgRank = (i + 1 + j) / 2;
+    for(let k = i; k < j; k++) {
+      ranks.set(sorted[k]!.slug, avgRank);
+    }
+    i = j;
+  }
+  return items.map(item => ranks.get(item.slug)!);
+}
+
+function pearson(x: number[], y: number[]): number {
+  const n = x.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+  for(let i = 0; i < n; i++) {
+    sumX += x[i]; sumY += y[i];
+    sumXY += x[i] * y[i];
+    sumX2 += x[i] * x[i]; sumY2 += y[i] * y[i];
+  }
+  const num = n * sumXY - sumX * sumY;
+  const den = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+  if (den === 0) return 0;
+  return num / den;
+}
+
+export interface Bootstrap {
+  samples: number;
+  spearman_median: number;
+  spearman_min: number;
+  top20_retention_pct: number;
+}
 
 export interface SnapshotProtocol {
   slug: string;
@@ -42,6 +78,19 @@ export interface ModelBreakdown {
   days_since_listed: number;
 }
 
+export interface FarmCost {
+  setup_txs: number;
+  weekly_txs: number;
+  weeks: number;
+  gas_per_tx_usd: number;
+  gas_usd: number;
+  hours: number;
+  time_usd: number;
+  capital_low_usd: number;
+  capital_high_usd: number;
+  total_usd: number;
+}
+
 export interface BoardRow {
   rank: number;
   slug: string;
@@ -62,6 +111,9 @@ export interface BoardRow {
   confidence: 'high' | 'medium' | 'low';
   model: ModelBreakdown;
   farm_steps: string[];
+  farm_cost: FarmCost;
+  est_farmer_airdrop_usd: number;
+  net_ev_usd: number;
 }
 
 export interface LiveRow {
@@ -90,6 +142,8 @@ export interface Stats {
   median_implied_usd: number;
   q3_implied_usd: number;
   confidence_counts: { high: number; medium: number; low: number };
+  median_net_ev_usd: number;
+  positive_ev_count: number;
 }
 
 export interface Backtest {
@@ -117,6 +171,7 @@ export interface RadarData {
   rows: BoardRow[];
   live: LiveRow[];
   backtest: Backtest;
+  bootstrap: Bootstrap;
 }
 
 export class SnapshotError extends Error {
@@ -130,6 +185,17 @@ const DAY_MS = 86_400_000;
 
 export function isPreToken(p: SnapshotProtocol): boolean {
   return p.gecko_id === null && p.symbol === null;
+}
+
+
+export function calculateImpliedValue(p: SnapshotProtocol, curve: CategoryCurve, asOf: string): number {
+  const base = 10 ** (curve.a + curve.b * Math.log10(p.tvl_usd));
+  const chg7d = typeof p.change_7d === 'number' && Number.isFinite(p.change_7d) ? p.change_7d : 0;
+  const clampedChg = Math.max(-25, Math.min(50, chg7d));
+  const momentum = 1 + 0.5 * (clampedChg / 100);
+  const days = daysSinceListed(asOf, p.listed_at);
+  const ageBoost = 1 + 0.5 * Math.log(1 + days / 365);
+  return Math.max(5_000_000, Math.min(50_000_000_000, Math.round(base * momentum * ageBoost)));
 }
 
 export function daysSinceListed(asOf: string, listedAt: string | null): number {
@@ -220,6 +286,47 @@ function getCapitalSmall(tvl: number): string {
   if (tvl >= 1_000_000_000) return '$1,000';
   if (tvl >= 100_000_000) return '$500';
   return '$250';
+}
+
+function getCapitalRange(tvl: number): [number, number] {
+  if (tvl >= 1_000_000_000) return [1000, 25000];
+  if (tvl >= 100_000_000) return [500, 5000];
+  return [250, 1000];
+}
+
+export function farmCost(p: SnapshotProtocol): FarmCost {
+  const chains = p.chains;
+  const mainChain = getMainChain(chains).toLowerCase();
+  const gasPerTx = {
+    ethereum: 4,
+    arbitrum: 0.15,
+    base: 0.05,
+    optimism: 0.15,
+    bsc: 0.1,
+    polygon: 0.05,
+    solana: 0.01,
+    avalanche: 0.1,
+    ton: 0.05
+  }[mainChain] ?? 0.5;
+
+  const catLower = (p.category ?? '').toLowerCase();
+  let weekly_txs = 2, weeks = 8;
+  if (catLower.includes('cex') || catLower.includes('exchange')) { weekly_txs = 8; weeks = 8; }
+  else if (catLower.includes('derivatives')) { weekly_txs = 4; weeks = 8; }
+  else if (catLower.includes('dex')) { weekly_txs = 3; weeks = 8; }
+  else if (catLower.includes('bridge')) { weekly_txs = 2; weeks = 8; }
+  else if (catLower.includes('staking') || catLower.includes('restaking')) { weekly_txs = 1; weeks = 10; }
+  else if (catLower.includes('lending') || catLower.includes('cdp') || catLower.includes('risk curator') || catLower.includes('yield')) { weekly_txs = 1; weeks = 8; }
+  else if (catLower.includes('prediction')) { weekly_txs = 3; weeks = 8; }
+  const setup_txs = 2;
+
+  const gas_usd = Math.round((setup_txs + weekly_txs * weeks) * gasPerTx * 100) / 100;
+  const hours = Math.round((0.5 + 0.25 * weeks) * 10) / 10;
+  const time_usd = Math.round(hours * 20);
+  const [capital_low_usd, capital_high_usd] = getCapitalRange(p.tvl_usd);
+  const total_usd = Math.round((gas_usd + time_usd) * 100) / 100;
+
+  return { setup_txs, weekly_txs, weeks, gas_per_tx_usd: gasPerTx, gas_usd, hours, time_usd, capital_low_usd, capital_high_usd, total_usd };
 }
 
 function getChainsText(chains: string[]): string {
@@ -385,18 +492,13 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
     const curve = p.category ? curveMap.get(p.category) : undefined;
     const activeCurve = curve ?? globalCurve;
 
+    const implied = calculateImpliedValue(p, activeCurve, snapshot.as_of);
     const base = 10 ** (activeCurve.a + activeCurve.b * Math.log10(p.tvl_usd));
-    
     const chg7d = typeof p.change_7d === 'number' && Number.isFinite(p.change_7d) ? p.change_7d : 0;
     const clampedChg = Math.max(-25, Math.min(50, chg7d));
     const momentum = 1 + 0.5 * (clampedChg / 100);
-
     const days = daysSinceListed(snapshot.as_of, p.listed_at);
     const ageBoost = 1 + 0.5 * Math.log(1 + days / 365);
-
-    const rawImplied = base * momentum * ageBoost;
-    const implied = Math.max(5_000_000, Math.min(50_000_000_000, Math.round(rawImplied)));
-
     const estAirdrop = Math.round(implied * 0.08);
 
     let confidence: 'high' | 'medium' | 'low';
@@ -409,6 +511,13 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
     }
 
     const steps = farmSteps(p);
+    const cost = farmCost(p);
+    const eligible_wallets = Math.max(5000, Math.min(500000, Math.round(p.tvl_usd / 20000)));
+    const est_farmer_airdrop_usd = Math.max(1, Math.round(estAirdrop / eligible_wallets));
+    const net_ev_usd = est_farmer_airdrop_usd - cost.total_usd;
+
+    const netText = net_ev_usd < 0 ? '-$' + Math.abs(net_ev_usd).toLocaleString() : '$' + net_ev_usd.toLocaleString();
+    steps.push(`Budget about $${cost.total_usd.toLocaleString()} all-in (gas ~$${cost.gas_usd.toLocaleString()} on ${getMainChain(p.chains)} plus ~${cost.hours.toFixed(1)} hours of time) against a mid-farmer airdrop share near $${est_farmer_airdrop_usd.toLocaleString()}, an estimated net value of ${netText}; capital of $${cost.capital_low_usd.toLocaleString()}-$${cost.capital_high_usd.toLocaleString()} stays deployed, not spent.`);
 
     const row: Omit<BoardRow, 'rank'> = {
       slug: p.slug,
@@ -437,12 +546,20 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
         days_since_listed: days,
       },
       farm_steps: steps,
+      farm_cost: cost,
+      est_farmer_airdrop_usd,
+      net_ev_usd,
     };
     return row;
   });
 
   // Sort by implied_value_usd descending, tie-break by slug ascending
   scored.sort((a, b) => b.implied_value_usd - a.implied_value_usd || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+
+  const medianCost = median(scored.map(r => r.farm_cost.total_usd));
+  const medianShare = median(scored.map(r => r.est_farmer_airdrop_usd));
+  const netPositive = scored.filter(r => r.net_ev_usd > 0).length;
+  process.stdout.write(`token radar costs: median farm cost $${medianCost.toLocaleString()}, median farmer share $${medianShare.toLocaleString()}, ${netPositive} of ${scored.length} plans net-positive\n`);
 
   return scored.map((r, i) => ({
     rank: i + 1,
@@ -472,6 +589,60 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
   const board = buildBoard(snapshot);
   const live = buildLiveRows(snapshot);
   const { globalCurve, curveMap } = computeCurves(snapshot.protocols);
+
+  const preToken = snapshot.protocols.filter(isPreToken);
+  const tokenedAll = snapshot.protocols.filter(p => !isPreToken(p) && p.tvl_usd >= 10_000_000 && p.mcap_usd! > 0 && p.listed_at !== null);
+  const baseSorted = board.map(r => ({ slug: r.slug, implied: r.implied_value_usd }));
+  const baseRanks = getRanks(baseSorted);
+  const baseTop20 = new Set(board.slice(0, 20).map(r => r.slug));
+
+  const correlations: number[] = [];
+  const retentionRates: number[] = [];
+
+  for (let s = 0; s < 20; s++) {
+    const subsample = tokenedAll.filter(p => fnv1a(p.slug + ":" + s) % 5 !== 0);
+    const { globalCurve: subGlobal, curveMap: subCurveMap } = computeCurves(subsample);
+
+    const bootRows = preToken.map(p => ({
+      slug: p.slug,
+      implied: calculateImpliedValue(p, subCurveMap.get(p.category!) ?? subGlobal, snapshot.as_of)
+    }));
+    bootRows.sort((a, b) => b.implied - a.implied || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+
+    const bootRanks = getRanks(bootRows);
+
+    const slugToBootRank = new Map(bootRows.map((r, i) => [r.slug, bootRanks[i]]));
+    const slugToBaseRank = new Map(baseSorted.map((r, i) => [r.slug, baseRanks[i]]));
+
+    const x: number[] = [];
+    const y: number[] = [];
+    for(const row of bootRows) {
+      x.push(slugToBaseRank.get(row.slug)!);
+      y.push(slugToBootRank.get(row.slug)!);
+    }
+    correlations.push(pearson(x, y));
+
+    const bootTop25 = new Set(bootRows.slice(0, 25).map(r => r.slug));
+    let count = 0;
+    for (const slug of baseTop20) {
+      if (bootTop25.has(slug)) count++;
+    }
+    retentionRates.push((count / 20) * 100);
+  }
+
+  const sortedCorrs = correlations.sort((a, b) => a - b);
+  const medianCorr = sortedCorrs[10]!;
+  const minCorr = sortedCorrs[0]!;
+  const avgRetention = retentionRates.reduce((a, b) => a + b, 0) / 20;
+
+  process.stdout.write(`token radar bootstrap: 20 samples, spearman median ${medianCorr.toFixed(3)} min ${minCorr.toFixed(3)}, top-20 retention ${avgRetention.toFixed(1)}%\n`);
+
+  const bootstrap: Bootstrap = {
+    samples: 20,
+    spearman_median: Math.round(medianCorr * 1000) / 1000,
+    spearman_min: Math.round(minCorr * 1000) / 1000,
+    top20_retention_pct: Math.round(avgRetention * 10) / 10
+  };
 
   const tokened = snapshot.protocols.filter(p => !isPreToken(p) && p.tvl_usd >= 10_000_000 && p.mcap_usd! > 0 && p.listed_at !== null)
     .sort((a, b) => a.listed_at!.localeCompare(b.listed_at!));
@@ -519,6 +690,8 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
     median_implied_usd: vals[Math.floor(vals.length * 0.5)]!,
     q3_implied_usd: vals[Math.floor(vals.length * 0.75)]!,
     confidence_counts: { high: 0, medium: 0, low: 0 },
+    median_net_ev_usd: median(board.map((r) => r.net_ev_usd)),
+    positive_ev_count: board.filter((r) => r.net_ev_usd > 0).length,
   };
   for (const r of board) {
     stats.confidence_counts[r.confidence]++;
@@ -540,6 +713,7 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
     rows: board,
     live,
     backtest,
+    bootstrap,
   };
 
   return { board, radar };

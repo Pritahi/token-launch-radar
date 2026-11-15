@@ -108,7 +108,8 @@
     tvl_usd: function (a, b) { return b.tvl_usd - a.tvl_usd; },
     change_7d: function (a, b) { return (b.change_7d || 0) - (a.change_7d || 0); },
     implied_value_usd: function (a, b) { return b.implied_value_usd - a.implied_value_usd; },
-    est_airdrop_usd: function (a, b) { return b.est_airdrop_usd - a.est_airdrop_usd; }
+    est_airdrop_usd: function (a, b) { return b.est_airdrop_usd - a.est_airdrop_usd; },
+    net_ev_usd: function (a, b) { return b.net_ev_usd - a.net_ev_usd; }
   };
 
   function boardState(params) {
@@ -171,6 +172,7 @@
       '<th data-sort="change_7d" class="num">7d</th>' +
       '<th data-sort="implied_value_usd" class="num">Implied value</th>' +
       '<th data-sort="est_airdrop_usd" class="num">Est. airdrop</th>' +
+      '<th data-sort="net_ev_usd" class="num">Net EV</th>' +
       '<th>Confidence</th>' +
       '</tr></thead><tbody id="tbody"></tbody></table></div>';
 
@@ -202,6 +204,7 @@
           '<td class="num ' + pctClass(r.change_7d) + '">' + fmtPct(r.change_7d) + '</td>' +
           '<td class="num" title="' + fmtFull(r.implied_value_usd) + '">' + fmtUSD(r.implied_value_usd) + '</td>' +
           '<td class="num" title="' + fmtFull(r.est_airdrop_usd) + '">' + fmtUSD(r.est_airdrop_usd) + '</td>' +
+          '<td class="num ' + (r.net_ev_usd >= 0 ? 'ev-pos' : 'ev-neg') + '">' + fmtUSD(r.net_ev_usd) + '</td>' +
           '<td>' + confBadge(r.confidence) + '</td>' +
           '</tr>';
       }).join('');
@@ -210,7 +213,7 @@
       var totalImplied = rows.reduce(function(sum, r) { return sum + (r.implied_value_usd || 0); }, 0);
       document.getElementById('f-count').textContent = rows.length + ' of ' + D.rows.length + ' - ' + fmtUSD(totalImplied) + ' shown';
 
-      var colNames = { rank: 'rank', name: 'protocol name', category: 'category', tvl_usd: 'TVL', change_7d: '7d change', implied_value_usd: 'implied value', est_airdrop_usd: 'est. airdrop' };
+      var colNames = { rank: 'rank', name: 'protocol name', category: 'category', tvl_usd: 'TVL', change_7d: '7d change', implied_value_usd: 'implied value', est_airdrop_usd: 'est. airdrop', net_ev_usd: 'Net EV' };
       var sortDir = '';
       if (['rank', 'name', 'category'].indexOf(st.sort) >= 0) {
         sortDir = (st.dir === 'desc' ? 'descending' : 'ascending');
@@ -241,9 +244,9 @@
     document.getElementById('f-reset').addEventListener('click', function () { location.hash = '#/board'; });
     document.getElementById('f-csv').addEventListener('click', function () {
       var rows = currentRows();
-      var csv = 'rank,name,slug,category,chains,tvl_usd,change_7d,implied_value_usd,est_airdrop_usd,confidence,watchlist\n';
+      var csv = 'rank,name,slug,category,chains,tvl_usd,change_7d,implied_value_usd,est_airdrop_usd,net_ev_usd,confidence,watchlist\n';
       csv += rows.map(function(r) {
-        return [r.rank, '"' + r.name + '"', r.slug, '"' + (r.category || '') + '"', '"' + (r.chains || []).join('|') + '"', r.tvl_usd, r.change_7d, r.implied_value_usd, r.est_airdrop_usd, r.confidence, r.watchlist ? 1 : 0].join(',');
+        return [r.rank, '"' + r.name + '"', r.slug, '"' + (r.category || '') + '"', '"' + (r.chains || []).join('|') + '"', r.tvl_usd, r.change_7d, r.implied_value_usd, r.est_airdrop_usd, r.net_ev_usd, r.confidence, r.watchlist ? 1 : 0].join(',');
       }).join('\n');
       var blob = new Blob([csv], { type: 'text/csv' });
       var url = URL.createObjectURL(blob);
@@ -313,6 +316,17 @@
       return '<div class="step"><span class="n">' + (idx + 1) + '</span><span class="txt">' + esc(s) + stepChips(s) + '</span></div>';
     }).join('');
 
+    var farmCost = r.farm_cost || {};
+    var costPanel = '<div class="panel"><h3>Farm cost breakdown</h3>' +
+        '<div class="statgrid">' +
+        '<div class="stat"><div class="s-label">Gas estimate</div><div class="s-value">~' + fmtUSD(farmCost.gas_usd) + '</div><div class="s-sub">' + (farmCost.setup_txs + farmCost.weekly_txs * farmCost.weeks) + ' total txs on ' + esc(r.chains[0] || 'Multi-chain') + '</div></div>' +
+        '<div class="stat"><div class="s-label">Time estimate</div><div class="s-value">~' + farmCost.hours + ' hours</div><div class="s-sub">valued at $20/hr = ' + fmtUSD(farmCost.time_usd) + '</div></div>' +
+        '<div class="stat"><div class="s-label">Capital deployed</div><div class="s-value">' + fmtUSD(farmCost.capital_low_usd) + ' - ' + fmtUSD(farmCost.capital_high_usd) + '</div><div class="s-sub">not spent</div></div>' +
+        '<div class="stat"><div class="s-label">Total cost</div><div class="s-value">' + fmtUSD(farmCost.total_usd) + '</div></div>' +
+        '</div>' +
+        '<div class="stat"><div class="s-label">Net expected value</div><div class="s-value ' + (r.net_ev_usd >= 0 ? 'ev-pos' : 'ev-neg') + '">' + fmtUSD(r.net_ev_usd) + '</div></div>' +
+        '</div>';
+
     view.innerHTML =
       '<div class="hero">' +
       '<div class="crumbs"><a href="#/board">Board</a> / ' + esc(r.category || '-') + ' / ' + esc(r.slug) + '</div>' +
@@ -325,6 +339,8 @@
       '<div class="stat"><div class="s-label">TVL</div><div class="s-value">' + fmtUSD(r.tvl_usd) + '</div></div>' +
       '<div class="stat"><div class="s-label">7d change</div><div class="s-value ' + pctClass(r.change_7d) + '">' + fmtPct(r.change_7d) + '</div></div>' +
       '<div class="stat"><div class="s-label">Est. airdrop pool (8%)</div><div class="s-value">' + fmtUSD(r.est_airdrop_usd) + '</div></div>' +
+      '<div class="stat"><div class="s-label">Mid-farmer share</div><div class="s-value">' + fmtUSD(r.est_farmer_airdrop_usd) + '</div></div>' +
+      '<div class="stat"><div class="s-label">Net EV after costs</div><div class="s-value ' + (r.net_ev_usd >= 0 ? 'ev-pos' : 'ev-neg') + '">' + fmtUSD(r.net_ev_usd) + '</div></div>' +
       '<div class="stat"><div class="s-label">Listed</div><div class="s-value">' + esc(r.listed_at || 'unknown') + '</div></div>' +
       '<div class="stat"><div class="s-label">Days tracked, no token</div><div class="s-value">' + fmtDays(r.days_since_listed) + '</div></div>' +
       '<div class="stat"><div class="s-label">Confidence</div><div class="s-value">' + confBadge(r.confidence) + '</div></div>' +
@@ -337,6 +353,7 @@
       '</div>' +
       '<div class="steps"><h3>Farm plan (' + (r.farm_steps || []).length + ' steps)</h3>' + steps +
       '<p class="note">' + esc(r.name) + ' records no token in the sealed snapshot. Smart-contract risk applies to every step; size positions accordingly.</p></div>' +
+      costPanel +
       '<p class="backrow" style="margin-top:16px"><a href="#/board">Back to the board</a></p>';
   }
 
@@ -354,6 +371,27 @@
     }).join('');
 
     var bt = D.backtest;
+    var stats = D.stats || {};
+    var bootstrap = D.bootstrap || {};
+    var gasTable = '<table class="plain"><thead><tr><th>Chain</th><th class="num">USD/tx</th></tr></thead><tbody>' +
+        '<tr><td>Ethereum</td><td class="num">4.00</td></tr>' +
+        '<tr><td>Arbitrum</td><td class="num">0.15</td></tr>' +
+        '<tr><td>Base</td><td class="num">0.05</td></tr>' +
+        '<tr><td>Optimism</td><td class="num">0.15</td></tr>' +
+        '<tr><td>BSC</td><td class="num">0.10</td></tr>' +
+        '<tr><td>Polygon</td><td class="num">0.05</td></tr>' +
+        '<tr><td>Solana</td><td class="num">0.01</td></tr>' +
+        '<tr><td>Avalanche</td><td class="num">0.10</td></tr>' +
+        '<tr><td>TON</td><td class="num">0.05</td></tr>' +
+        '<tr><td>Default</td><td class="num">0.50</td></tr>' +
+        '</tbody></table>';
+    
+    var costModelPanel = '<div class="panel"><h3>Farm cost model</h3>' + gasTable +
+        '<p class="note">Cadence 1-8 txs/week over 8-10 weeks by category, time valued at $20/hr, eligible wallets = clamp(TVL / 20000, 5000, 500000), mid-farmer share = 8% cohort pool / eligible wallets, net EV = share - (gas + time), capital deployed is not spent.</p>' +
+        '<p class="note" style="margin-top:8px">Across the board: ' + stats.positive_ev_count + ' of ' + D.board_size + ' plans are net-positive; median net EV is ' + fmtUSD(stats.median_net_ev_usd) + '.</p></div>';
+
+    var bootstrapPanel = '<div class="panel"><h3>Bootstrap stability</h3>' +
+        '<p class="note">We refit the category size curves on ' + bootstrap.samples + ' deterministic 80% subsamples of the calibration protocols (seeded by FNV-1a hashes of protocol slugs, no randomness) and re-rank the full board each time. Spearman rank correlation vs the base ranking: median ' + bootstrap.spearman_median.toFixed(3) + ', worst ' + bootstrap.spearman_min.toFixed(3) + '. ' + (bootstrap.top20_retention_pct * 100).toFixed(0) + '% of the base top 20 stay within the bootstrap top 25 on average.</p></div>';
     
     view.innerHTML =
       '<div class="panel"><h3>The value model</h3>' +
@@ -375,7 +413,8 @@
       rows + '</tbody></table></div>' +
       '<div class="panel"><h3>Confidence tiers</h3>' +
       '<p>High: at least 8 calibration protocols in the category and TVL above the ' + fmtUSD(D.floor_usd) + ' floor. ' +
-      'Medium: at least 3 calibration protocols. Low: everything else. Confidence describes how well the category multiple is grounded, never whether a token will launch.</p></div>';
+      'Medium: at least 3 calibration protocols. Low: everything else. Confidence describes how well the category multiple is grounded, never whether a token will launch.</p></div>' +
+      costModelPanel + bootstrapPanel;
   }
 
   // ---------- already launched ----------
