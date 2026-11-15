@@ -153,6 +153,7 @@
       '<button class="btn-reset" id="f-reset">Reset</button>' +
       '<button class="btn-reset" id="f-csv">Download CSV</button>' +
       '<span class="result-count" id="f-count"></span>' +
+      '<div id="f-sort-caption" style="margin-top:4px;font-size:0.9em;color:#888;"></div>' +
       '</div>';
 
     view.innerHTML = kpis + filters + '<div class="tablewrap"><table class="board"><thead><tr>' +
@@ -199,7 +200,19 @@
           '</tr>';
       }).join('');
       document.getElementById('tbody').innerHTML = html;
-      document.getElementById('f-count').textContent = rows.length + ' of ' + D.rows.length;
+
+      var totalImplied = rows.reduce(function(sum, r) { return sum + (r.implied_value_usd || 0); }, 0);
+      document.getElementById('f-count').textContent = rows.length + ' of ' + D.rows.length + ' - ' + fmtUSD(totalImplied) + ' shown';
+
+      var colNames = { rank: 'rank', name: 'protocol name', category: 'category', tvl_usd: 'TVL', change_7d: '7d change', implied_value_usd: 'implied value', est_airdrop_usd: 'est. airdrop' };
+      var sortDir = '';
+      if (['rank', 'name', 'category'].indexOf(st.sort) >= 0) {
+        sortDir = (st.dir === 'desc' ? 'descending' : 'ascending');
+      } else {
+        sortDir = (st.dir === 'desc' ? 'lowest first' : 'highest first');
+      }
+      document.getElementById('f-sort-caption').textContent = 'Sorted by ' + colNames[st.sort] + ', ' + sortDir;
+
       var ths = document.querySelectorAll('table.board th[data-sort]');
       for (var i = 0; i < ths.length; i++) {
         ths[i].classList.remove('sorted-asc', 'sorted-desc');
