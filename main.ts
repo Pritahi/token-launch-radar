@@ -86,5 +86,6 @@ process.stdout.write(
     `Top 5:\n` +
     board.slice(0, 5).map(r => `  #${r.rank} ${r.name.padEnd(20)} $${(r.implied_value_usd/1e6).toFixed(1)}M`).join('\n') + `\n` +
     `Confidence: high: ${radar.stats.confidence_counts.high}, medium: ${radar.stats.confidence_counts.medium}, low: ${radar.stats.confidence_counts.low}\n` +
+    `token radar backtest: fit=${radar.backtest.fit_count} test=${radar.backtest.test_count} median |log10 err|=${radar.backtest.median_abs_log10_error} within2x=${radar.backtest.within_2x_pct}% within5x=${radar.backtest.within_5x_pct}%\n` +
     `token radar: output written to ${out}: board.json, data.js, dashboard/ (${dashFiles.length} files), screenshots/ (${shots.length} images), dossier.json\n`,
 );

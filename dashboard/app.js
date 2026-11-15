@@ -330,10 +330,10 @@
       '<div class="stat"><div class="s-label">Confidence</div><div class="s-value">' + confBadge(r.confidence) + '</div></div>' +
       '</div></div>' +
       '<div class="bars"><h3>How the implied value is built</h3>' +
-      barRow('TVL base × ' + (m.category_multiple != null ? m.category_multiple : '?') + ' multiple (' + (m.calibration_count || 0) + ' calibration protocols)', base, max, '#4cc9f0') +
+      barRow('size curve 10^(a + b·log10 TVL), a=' + m.curve_a.toFixed(2) + ' b=' + m.curve_b.toFixed(2) + ' (' + (m.curve_own_fit ? 'own category fit' : 'global fit') + ')', base, max, '#4cc9f0') +
       barRow('× momentum ' + (m.momentum != null ? m.momentum : '?'), afterMom, max, '#4cc9f0') +
       barRow('× age boost ' + (m.age_boost != null ? m.age_boost : '?'), afterAge, max, '#34f5a2') +
-      '<p class="note">Clamped to $5M-$50B. Multiples are medians of mcap/TVL over tokened protocols in the same category, computed from this snapshot.</p>' +
+      '<p class="note">Clamped to $5M-$50B. Curve fitted by least squares of log10(mcap) on log10(TVL) over this snapshot\'s tokened protocols (own category fit with 4+ examples, else the global fit).</p>' +
       '</div>' +
       '<div class="steps"><h3>Farm plan (' + (r.farm_steps || []).length + ' steps)</h3>' + steps +
       '<p class="note">' + esc(r.name) + ' records no token in the sealed snapshot. Smart-contract risk applies to every step; size positions accordingly.</p></div>' +
@@ -343,30 +343,35 @@
   // ---------- methodology ----------
   function renderMethodology() {
     setNav('methodology');
-    var cats = Object.keys(D.category_medians).map(function (k) { return D.category_medians[k]; })
-      .sort(function (a, b) { return a.category < b.category ? -1 : 1; });
-    var rows = cats.map(function (c) {
-      return '<tr><td>' + esc(c.category) + '</td><td class="num">' + c.count + '</td>' +
-        '<td class="num">' + c.median.toFixed(3) + '</td>' +
-        '<td>' + (c.fallback ? 'global median (fewer than 3 tokened)' : 'category median') + '</td></tr>';
+    
+    var catNames = Object.keys(D.category_curves).sort();
+    var rows = ['global'].concat(catNames).map(function(k) {
+        var c = (k === 'global') ? D.global_curve : D.category_curves[k];
+        return '<tr><td>' + esc(c.category) + '</td><td class="num">' + c.count + '</td>' +
+               '<td class="num">' + c.b.toFixed(4) + '</td>' +
+               '<td class="num">' + c.a.toFixed(4) + '</td>' +
+               '<td>' + (c.own_fit ? 'own fit' : 'global fit') + '</td></tr>';
     }).join('');
+
+    var bt = D.backtest;
+    
     view.innerHTML =
       '<div class="panel"><h3>The value model</h3>' +
-      '<div class="formula">implied_value = clamp(TVL × category_multiple × momentum × age_boost, $5M, $50B)\n' +
-      'category_multiple = median(mcap / TVL) over tokened protocols in the same category with TVL ≥ $10M (clamped 0.02-5)\n' +
+      '<div class="formula">implied_value = clamp(10^(a + b × log10(TVL)) × momentum × age_boost, $5M, $50B)\n' +
+      'a, b = least-squares fit of log10(mcap) on log10(TVL) over the snapshot\'s tokened protocols (per category with ≥ 4 examples, else the global fit)\n' +
       'momentum = 1 + 0.5 × clamp(change_7d, -25, 50) / 100   (range 0.875-1.25)\n' +
       'age_boost = 1 + 0.5 × ln(1 + days_tracked / 365)\n' +
       'est_airdrop = 8% of implied value (farmer cohort share, context only)</div>' +
-      '<p class="note">Every number is computed from the sealed snapshot at build time; nothing is hardcoded per protocol. ' +
-      'Global fallback multiple: ' + D.global_median_multiple.toFixed(3) + ' (median over all tokened protocols with TVL ≥ $10M). ' +
-      'Pre-token means the snapshot records no token: gecko_id and symbol are both empty.</p></div>' +
-      '<div class="panel"><h3>Board stats</h3>' +
-      '<ul><li>Q1 implied value: ' + fmtUSD(D.stats.q1_implied_usd) + '</li>' +
-      '<li>Median implied value: ' + fmtUSD(D.stats.median_implied_usd) + '</li>' +
-      '<li>Q3 implied value: ' + fmtUSD(D.stats.q3_implied_usd) + '</li>' +
-      '<li>Confidence: ' + D.stats.confidence_counts.high + ' High, ' + D.stats.confidence_counts.medium + ' Medium, ' + D.stats.confidence_counts.low + ' Low</li></ul></div>' +
-      '<div class="panel"><h3>Category multiples (' + cats.length + ' categories)</h3>' +
-      '<table class="plain"><thead><tr><th>Category</th><th class="num">Tokened with TVL ≥ $10M</th><th class="num">Median mcap/TVL</th><th>Basis</th></tr></thead><tbody>' +
+      '</div>' +
+      '<div class="panel"><h3>Out-of-sample backtest</h3>' +
+      '<p>Method: Fit model on data before ' + esc(bt.split_date) + ', test on protocols launched after.</p>' +
+      '<ul><li>Fit count: ' + bt.fit_count + '</li>' +
+      '<li>Test count: ' + bt.test_count + '</li>' +
+      '<li>Median abs log10 error: ' + bt.median_abs_log10_error.toFixed(3) + '</li>' +
+      '<li>Within 2x: ' + (bt.within_2x_pct * 100).toFixed(1) + '%</li>' +
+      '<li>Within 5x: ' + (bt.within_5x_pct * 100).toFixed(1) + '%</li></ul></div>' +
+      '<div class="panel"><h3>Category curves (' + Object.keys(D.category_curves).length + ' categories)</h3>' +
+      '<table class="plain"><thead><tr><th>Category</th><th class="num">Examples</th><th class="num">Slope b</th><th class="num">Intercept a</th><th>Basis</th></tr></thead><tbody>' +
       rows + '</tbody></table></div>' +
       '<div class="panel"><h3>Confidence tiers</h3>' +
       '<p>High: at least 8 calibration protocols in the category and TVL above the ' + fmtUSD(D.floor_usd) + ' floor. ' +

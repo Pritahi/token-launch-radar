@@ -36,8 +36,9 @@ export interface ModelBreakdown {
   base: number;
   momentum: number;
   age_boost: number;
-  category_multiple: number;
-  calibration_count: number;
+  curve_a: number;
+  curve_b: number;
+  curve_own_fit: boolean;
   days_since_listed: number;
 }
 
@@ -76,11 +77,12 @@ export interface LiveRow {
   symbol: string | null;
 }
 
-export interface CategoryMedianInfo {
+export interface CategoryCurve {
   category: string;
   count: number;
-  median: number;
-  fallback: boolean;
+  a: number;
+  b: number;
+  own_fit: boolean;
 }
 
 export interface Stats {
@@ -88,6 +90,15 @@ export interface Stats {
   median_implied_usd: number;
   q3_implied_usd: number;
   confidence_counts: { high: number; medium: number; low: number };
+}
+
+export interface Backtest {
+  fit_count: number;
+  test_count: number;
+  split_date: string;
+  median_abs_log10_error: number;
+  within_2x_pct: number;
+  within_5x_pct: number;
 }
 
 export interface RadarData {
@@ -100,11 +111,12 @@ export interface RadarData {
   pre_token_count: number;
   live_size: number;
   total_implied_usd: number;
-  global_median_multiple: number;
-  category_medians: Record<string, CategoryMedianInfo>;
+  global_curve: CategoryCurve;
+  category_curves: Record<string, CategoryCurve>;
   stats: Stats;
   rows: BoardRow[];
   live: LiveRow[];
+  backtest: Backtest;
 }
 
 export class SnapshotError extends Error {
@@ -135,23 +147,46 @@ function median(arr: number[]): number {
   return s.length % 2 === 0 ? (s[mid - 1]! + s[mid]!) / 2 : s[mid]!;
 }
 
-export function computeCategoryMedians(protocols: SnapshotProtocol[]): {
-  globalMedian: number;
-  catMap: Map<string, CategoryMedianInfo>;
+function fitCurve(data: {tvl: number, mcap: number}[]): {a: number, b: number} {
+  const n = data.length;
+  let sumX = 0;
+  let sumY = 0;
+  let sumX2 = 0;
+  let sumXY = 0;
+  for (const p of data) {
+    const X = Math.log10(p.tvl);
+    const Y = Math.log10(p.mcap);
+    sumX += X;
+    sumY += Y;
+    sumX2 += X * X;
+    sumXY += X * Y;
+  }
+  const b = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const a = (sumY - b * sumX) / n;
+  return { a: Math.round(a * 1e6) / 1e6, b: Math.round(b * 1e6) / 1e6 };
+}
+
+export function computeCurves(protocols: SnapshotProtocol[]): {
+  globalCurve: CategoryCurve;
+  curveMap: Map<string, CategoryCurve>;
 } {
   const calibration = protocols.filter(
     (p) => !isPreToken(p) && p.mcap_usd !== null && p.mcap_usd > 0 && p.tvl_usd >= 10_000_000,
-  );
+  ).map(p => ({tvl: p.tvl_usd, mcap: p.mcap_usd!, category: p.category}));
 
-  const globalRatios = calibration.map((p) => p.mcap_usd! / p.tvl_usd);
-  const rawGlobalMedian = median(globalRatios);
-  const globalMedian = Math.max(0.02, Math.min(5, rawGlobalMedian));
+  const globalCurveData = fitCurve(calibration);
+  const globalCurve: CategoryCurve = {
+    category: 'global',
+    count: calibration.length,
+    ...globalCurveData,
+    own_fit: false
+  };
 
-  const catRatioMap = new Map<string, number[]>();
+  const catDataMap = new Map<string, {tvl: number, mcap: number}[]>();
   for (const p of calibration) {
     if (p.category) {
-      if (!catRatioMap.has(p.category)) catRatioMap.set(p.category, []);
-      catRatioMap.get(p.category)!.push(p.mcap_usd! / p.tvl_usd);
+      if (!catDataMap.has(p.category)) catDataMap.set(p.category, []);
+      catDataMap.get(p.category)!.push({tvl: p.tvl, mcap: p.mcap});
     }
   }
 
@@ -160,22 +195,19 @@ export function computeCategoryMedians(protocols: SnapshotProtocol[]): {
     if (p.category) allCats.add(p.category);
   }
 
-  const catMap = new Map<string, CategoryMedianInfo>();
+  const curveMap = new Map<string, CategoryCurve>();
   for (const cat of allCats) {
-    const list = catRatioMap.get(cat) ?? [];
+    const list = catDataMap.get(cat) ?? [];
     const count = list.length;
-    let med: number;
-    let fallback = false;
-    if (count >= 3) {
-      med = Math.max(0.02, Math.min(5, median(list)));
+    if (count >= 4) {
+      const curveData = fitCurve(list);
+      curveMap.set(cat, { category: cat, count, ...curveData, own_fit: true });
     } else {
-      med = globalMedian;
-      fallback = true;
+      curveMap.set(cat, { ...globalCurve, category: cat, count, own_fit: false });
     }
-    catMap.set(cat, { category: cat, count, median: med, fallback });
   }
 
-  return { globalMedian, catMap };
+  return { globalCurve, curveMap };
 }
 
 function getCapitalText(tvl: number): string {
@@ -338,23 +370,23 @@ export function farmSteps(p: SnapshotProtocol): string[] {
 
 export function buildBoard(snapshot: Snapshot): BoardRow[] {
   const watchSet = new Set(snapshot.watchlist);
-  const { globalMedian, catMap } = computeCategoryMedians(snapshot.protocols);
+  const { globalCurve, curveMap } = computeCurves(snapshot.protocols);
 
-  // Log medians to stdout at build time per AGENTS.md requirements
-  const mediansLog = [...catMap.entries()]
-    .filter(([_, stats]) => !stats.fallback)
-    .map(([cat, stats]) => `${cat} ${stats.median.toFixed(2)}`)
+  // Log curves to stdout at build time per AGENTS.md requirements
+  const ownFitLog = [...curveMap.entries()]
+    .filter(([_, c]) => c.own_fit)
+    .map(([cat, c]) => `${cat} a=${c.a} b=${c.b} (n=${c.count})`)
     .join(', ');
-  process.stdout.write(`token radar model: category medians: ${mediansLog}\n`);
+  process.stdout.write(`token radar model: global curve a=${globalCurve.a} b=${globalCurve.b}; own-fit categories: ${ownFitLog}\n`);
 
   const preToken = snapshot.protocols.filter(isPreToken);
 
   const scored = preToken.map((p) => {
-    const catStats = p.category ? catMap.get(p.category) : undefined;
-    const catMult = catStats ? catStats.median : globalMedian;
-    const calibrationCount = catStats ? catStats.count : 0;
+    const curve = p.category ? curveMap.get(p.category) : undefined;
+    const activeCurve = curve ?? globalCurve;
 
-    const base = p.tvl_usd * catMult;
+    const base = 10 ** (activeCurve.a + activeCurve.b * Math.log10(p.tvl_usd));
+    
     const chg7d = typeof p.change_7d === 'number' && Number.isFinite(p.change_7d) ? p.change_7d : 0;
     const clampedChg = Math.max(-25, Math.min(50, chg7d));
     const momentum = 1 + 0.5 * (clampedChg / 100);
@@ -368,9 +400,9 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
     const estAirdrop = Math.round(implied * 0.08);
 
     let confidence: 'high' | 'medium' | 'low';
-    if (calibrationCount >= 8 && p.tvl_usd >= snapshot.floor_usd) {
+    if (activeCurve.own_fit && p.tvl_usd >= snapshot.floor_usd) {
       confidence = 'high';
-    } else if (calibrationCount >= 3) {
+    } else if (activeCurve.count >= 2) {
       confidence = 'medium';
     } else {
       confidence = 'low';
@@ -399,8 +431,9 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
         base: Math.round(base),
         momentum: Math.round(momentum * 1000) / 1000,
         age_boost: Math.round(ageBoost * 1000) / 1000,
-        category_multiple: Math.round(catMult * 1000) / 1000,
-        calibration_count: calibrationCount,
+        curve_a: activeCurve.a,
+        curve_b: activeCurve.b,
+        curve_own_fit: activeCurve.own_fit,
         days_since_listed: days,
       },
       farm_steps: steps,
@@ -438,11 +471,44 @@ export function buildLiveRows(snapshot: Snapshot): LiveRow[] {
 export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: RadarData } {
   const board = buildBoard(snapshot);
   const live = buildLiveRows(snapshot);
-  const { globalMedian, catMap } = computeCategoryMedians(snapshot.protocols);
+  const { globalCurve, curveMap } = computeCurves(snapshot.protocols);
 
-  const categoryMediansObj: Record<string, CategoryMedianInfo> = {};
-  for (const [cat, info] of catMap.entries()) {
-    categoryMediansObj[cat] = info;
+  const tokened = snapshot.protocols.filter(p => !isPreToken(p) && p.tvl_usd >= 10_000_000 && p.mcap_usd! > 0 && p.listed_at !== null)
+    .sort((a, b) => a.listed_at!.localeCompare(b.listed_at!));
+  const split = Math.floor(tokened.length * 0.6);
+  const fit = tokened.slice(0, split);
+  const test = tokened.slice(split);
+
+  const { globalCurve: fitGlobal, curveMap: fitCurveMap } = computeCurves(fit);
+
+  const results: number[] = [];
+  for (const p of test) {
+    const curve = (p.category && fitCurveMap.has(p.category) && fitCurveMap.get(p.category)!.own_fit)
+      ? fitCurveMap.get(p.category)!
+      : fitGlobal;
+      
+    const pred = 10 ** (curve.a + curve.b * Math.log10(p.tvl_usd));
+    
+    const err = Math.log10(pred / p.mcap_usd!);
+    results.push(Math.abs(err));
+  }
+
+  const medianErr = median(results);
+  const within2x = (results.filter(e => e <= Math.log10(2)).length / results.length) * 100;
+  const within5x = (results.filter(e => e <= Math.log10(5)).length / results.length) * 100;
+
+  const backtest: Backtest = {
+    fit_count: fit.length,
+    test_count: test.length,
+    split_date: test[0]?.listed_at ?? 'N/A',
+    median_abs_log10_error: Math.round(medianErr * 1000) / 1000,
+    within_2x_pct: Math.round(within2x * 10) / 10,
+    within_5x_pct: Math.round(within5x * 10) / 10
+  };
+
+  const categoryCurvesObj: Record<string, CategoryCurve> = {};
+  for (const [cat, curve] of curveMap.entries()) {
+    categoryCurvesObj[cat] = curve;
   }
 
   const totalImplied = board.reduce((sum, r) => sum + r.implied_value_usd, 0);
@@ -468,11 +534,12 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
     pre_token_count: board.length,
     live_size: live.length,
     total_implied_usd: totalImplied,
-    global_median_multiple: globalMedian,
-    category_medians: categoryMediansObj,
+    global_curve: globalCurve,
+    category_curves: categoryCurvesObj,
     stats,
     rows: board,
     live,
+    backtest,
   };
 
   return { board, radar };
