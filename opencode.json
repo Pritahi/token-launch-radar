@@ -1,13 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "google/gemini-3.5-flash",
+  "model": "google/gemini-3.1-flash-lite",
   "provider": {
     "google": {
       "options": {
         "apiKey": "{env:GOOGLE_GENERATIVE_AI_API_KEY}"
       },
       "models": {
-        "gemini-3.5-flash": {},
         "gemini-3.1-flash-lite": {}
       }
     }
