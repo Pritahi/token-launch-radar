@@ -54,6 +54,7 @@ export interface BoardRow {
   gecko_id: string | null;
   symbol: string | null;
   token_status: 'pre-token';
+  watchlist: boolean;
   days_since_listed: number;
   implied_value_usd: number;
   est_airdrop_usd: number;
@@ -87,6 +88,7 @@ export interface RadarData {
   source: string;
   floor_usd: number;
   watchlist_size: number;
+  watchlist_covered: number;
   board_size: number;
   pre_token_count: number;
   live_size: number;
@@ -327,6 +329,7 @@ export function farmSteps(p: SnapshotProtocol): string[] {
 }
 
 export function buildBoard(snapshot: Snapshot): BoardRow[] {
+  const watchSet = new Set(snapshot.watchlist);
   const { globalMedian, catMap } = computeCategoryMedians(snapshot.protocols);
 
   // Log medians to stdout at build time per AGENTS.md requirements
@@ -379,6 +382,7 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
       gecko_id: p.gecko_id,
       symbol: p.symbol,
       token_status: 'pre-token',
+      watchlist: watchSet.has(p.slug),
       days_since_listed: days,
       implied_value_usd: implied,
       est_airdrop_usd: estAirdrop,
@@ -440,6 +444,7 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
     source: snapshot.source,
     floor_usd: snapshot.floor_usd,
     watchlist_size: snapshot.watchlist.length,
+    watchlist_covered: board.filter((r) => r.watchlist).length,
     board_size: board.length,
     pre_token_count: board.length,
     live_size: live.length,

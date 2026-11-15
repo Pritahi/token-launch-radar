@@ -7,8 +7,30 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<a class="skip" href="#board">Skip to the board</a>
-<main id="board" tabindex="-1" aria-busy="true"></main>
+<a class="skip" href="#view">Skip to content</a>
+<header class="topbar">
+  <div class="brand">
+    <span class="radar-dot" aria-hidden="true"></span>
+    <div>
+      <h1>Token Radar</h1>
+      <p class="tagline">Pre-token protocols ranked by implied launch value, computed from the sealed DefiLlama snapshot.</p>
+    </div>
+  </div>
+  <div class="topmeta">
+    <span id="meta-asof" class="chip"></span>
+    <span id="meta-counts" class="chip"></span>
+  </div>
+  <nav class="tabs" aria-label="Views">
+    <a href="#/board" data-nav="board">Board</a>
+    <a href="#/methodology" data-nav="methodology">Methodology</a>
+    <a href="#/launched" data-nav="launched">Already launched</a>
+  </nav>
+</header>
+<main id="view" tabindex="-1"></main>
+<footer class="foot">
+  <span id="foot-source"></span>
+  <span>Records marked "records no token" reflect DefiLlama's record in the sealed snapshot.</span>
+</footer>
 <script src="../data.js"></script>
 <script src="app.js"></script>
 </body>
