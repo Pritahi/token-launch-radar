@@ -39,11 +39,14 @@ a:hover{text-decoration:underline}
   border-radius:12px;padding:12px;margin-bottom:16px}
 .filters input[type=search],.filters select{background:var(--panel2);border:1px solid var(--line);color:var(--text);
   border-radius:8px;padding:7px 10px;font-size:13px;font-family:var(--sans)}
+.filters input[type=search]:focus-visible,.filters select:focus-visible,.btn-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .filters input[type=search]{min-width:200px}
 .filters label.toggle{display:flex;gap:6px;align-items:center;color:var(--dim);font-size:13px;cursor:pointer}
 .result-count{margin-left:auto;color:var(--dim);font-family:var(--mono);font-size:12px}
 .btn-reset{background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:6px 10px;cursor:pointer}
 .btn-reset:hover{color:var(--accent);border-color:var(--accent)}
+
+.sort-caption{color:var(--dim);font-size:12px;font-family:var(--mono);margin-bottom:8px}
 
 .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);max-height:72vh}
 table.board{border-collapse:collapse;width:100%;font-size:13px}
@@ -57,6 +60,8 @@ table.board thead th.sorted-asc,table.board thead th.sorted-desc{border-bottom:2
 table.board tbody td{padding:8px 12px;border-bottom:1px solid rgba(29,50,82,.5);white-space:nowrap}
 table.board tbody tr:nth-child(even){background:rgba(13,26,46,.55)}
 table.board tbody tr:hover{background:rgba(52,245,162,.07);cursor:pointer;box-shadow:inset 2px 0 0 var(--accent)}
+table.board tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+table.board tbody tr:first-child td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
 .pos{color:var(--accent)} .neg{color:var(--red)}
 .namecell{font-weight:600}
 .wl{font-size:10px;border:1px solid var(--amber);color:var(--amber);border-radius:4px;padding:1px 4px;margin-left:6px;vertical-align:middle}
@@ -64,6 +69,7 @@ table.board tbody tr:hover{background:rgba(52,245,162,.07);cursor:pointer;box-sh
 .conf::before{content:"";width:8px;height:8px;border-radius:50%}
 .conf.high::before{background:var(--accent)} .conf.medium::before{background:var(--amber)} .conf.low::before{background:var(--red)}
 
+.hero,.panel{scroll-margin-top:80px}
 .hero{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;margin-bottom:16px}
 .hero .crumbs{margin-bottom:12px;font-size:13px}
 .hero .nav-links{display:flex;justify-content:space-between;margin-bottom:12px;font-size:13px}
@@ -90,6 +96,8 @@ svg.bartrack{width:100%;height:18px;display:block}
 .step .chips{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap}
 .mini{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--cyan)}
 .mini.cost{color:var(--amber)}
+.mini-chip{display:inline-block;padding:4px 8px;border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:12px;background:var(--panel2);cursor:pointer}
+.mini-chip:hover{border-color:var(--accent);color:var(--accent);text-decoration:none}
 .note{margin-top:12px;color:var(--dim);font-size:12px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
 .formula{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:8px;

@@ -156,7 +156,13 @@
       '<div id="f-sort-caption" style="margin-top:4px;font-size:0.9em;color:#888;"></div>' +
       '</div>';
 
-    view.innerHTML = kpis + filters + '<div class="tablewrap"><table class="board"><thead><tr>' +
+    var wl = D.rows.filter(function(r) { return r.watchlist; }).sort(function(a,b) { return a.rank - b.rank; });
+    var wlPanel = '<div class="panel"><h3>Watchlist (' + D.watchlist_size + ')</h3><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">' +
+      wl.map(function(r) {
+        return '<a href="#/protocol/' + esc(r.slug) + '" class="mini-chip">' + esc(r.name) + ' #' + r.rank + '</a>';
+      }).join('') + '</div></div>';
+
+    view.innerHTML = kpis + filters + wlPanel + '<div class="tablewrap"><table class="board"><thead><tr>' +
       '<th data-sort="rank" class="num">#</th>' +
       '<th data-sort="name">Protocol</th>' +
       '<th data-sort="category">Category</th>' +
