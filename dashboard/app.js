@@ -151,6 +151,7 @@
       '<select id="f-tvl" aria-label="Minimum TVL">' + tvlOpts + '</select>' +
       '<label class="toggle"><input type="checkbox" id="f-wl"' + (st.wl === '1' ? ' checked' : '') + '> Watchlist only</label>' +
       '<button class="btn-reset" id="f-reset">Reset</button>' +
+      '<button class="btn-reset" id="f-csv">Download CSV</button>' +
       '<span class="result-count" id="f-count"></span>' +
       '</div>';
 
@@ -219,6 +220,20 @@
     document.getElementById('f-tvl').addEventListener('change', function (e) { st.tvl = e.target.value; push(); });
     document.getElementById('f-wl').addEventListener('change', function (e) { st.wl = e.target.checked ? '1' : '0'; push(); });
     document.getElementById('f-reset').addEventListener('click', function () { location.hash = '#/board'; });
+    document.getElementById('f-csv').addEventListener('click', function () {
+      var rows = currentRows();
+      var csv = 'rank,name,slug,category,chains,tvl_usd,change_7d,implied_value_usd,est_airdrop_usd,confidence,watchlist\n';
+      csv += rows.map(function(r) {
+        return [r.rank, '"' + r.name + '"', r.slug, '"' + (r.category || '') + '"', '"' + (r.chains || []).join('|') + '"', r.tvl_usd, r.change_7d, r.implied_value_usd, r.est_airdrop_usd, r.confidence, r.watchlist ? 1 : 0].join(',');
+      }).join('\n');
+      var blob = new Blob([csv], { type: 'text/csv' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'token-radar.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
     var heads = document.querySelectorAll('table.board th[data-sort]');
     for (var i = 0; i < heads.length; i++) {
       heads[i].addEventListener('click', function () {
