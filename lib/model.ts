@@ -274,15 +274,26 @@ function getCapitalBands(tvl: number): {low: number, high: number} {
   return {low: 250, high: 1000};
 }
 
+/**
+ * Computes the estimated farm cost for a protocol based on its category and main chain.
+ *
+ * Cost Model Components:
+ * - Gas: Setup (2 txs) + (weekly_txs * weeks). Costs derived from chain-specific estimates.
+ * - Time: Fixed setup hours + (0.25 hours per week). Valued at $20/hr.
+ * - Capital Lockup: Estimated based on TVL tiers (low/high bands).
+ *
+ * Total Cost = (Gas + Time cost) rounded to 2 decimal places.
+ */
 export function farmCost(p: SnapshotProtocol): FarmCost {
   const catLower = (p.category ?? '').toLowerCase();
   const mainChain = getMainChain(p.chains).toLowerCase();
   
-  const gasMap: Record<string, number> = {
+  const GAS_MAP: Record<string, number> = {
     ethereum: 4, arbitrum: 0.15, base: 0.05, optimism: 0.15, bsc: 0.1, polygon: 0.05, solana: 0.01, avalanche: 0.1, ton: 0.05
   };
-  const gas_per_tx_usd = gasMap[mainChain] ?? 0.5;
+  const gas_per_tx_usd = GAS_MAP[mainChain] ?? 0.5;
   
+  // Farming cadence parameters
   let weekly_txs = 2;
   let weeks = 8;
   
@@ -294,15 +305,18 @@ export function farmCost(p: SnapshotProtocol): FarmCost {
   else if (catLower.includes('lending') || catLower.includes('cdp') || catLower.includes('risk curator') || catLower.includes('yield')) { weekly_txs = 1; weeks = 8; }
   else if (catLower.includes('prediction')) { weekly_txs = 3; weeks = 8; }
 
-  const setup_txs = 2;
-  const gas_usd = Math.round((setup_txs + weekly_txs * weeks) * gas_per_tx_usd * 100) / 100;
+  const SETUP_TXS = 2;
+  const TIME_VAL_PER_HOUR_USD = 20;
+
+  // Derivations
+  const gas_usd = Math.round((SETUP_TXS + weekly_txs * weeks) * gas_per_tx_usd * 100) / 100;
   const hours = Math.round((0.5 + 0.25 * weeks) * 10) / 10;
-  const time_usd = Math.round(hours * 20);
+  const time_usd = Math.round(hours * TIME_VAL_PER_HOUR_USD);
   
   const {low, high} = getCapitalBands(p.tvl_usd);
   
   return {
-    setup_txs,
+    setup_txs: SETUP_TXS,
     weekly_txs,
     weeks,
     gas_per_tx_usd,
@@ -553,6 +567,10 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
   return rows;
 }
 
+/**
+ * Transforms snapshot protocols into live rows for the dashboard benchmarking view.
+ * Excludes pre-token protocols.
+ */
 export function buildLiveRows(snapshot: Snapshot): LiveRow[] {
   return snapshot.protocols
     .filter((p) => !isPreToken(p))
@@ -571,6 +589,10 @@ export function buildLiveRows(snapshot: Snapshot): LiveRow[] {
     }));
 }
 
+/**
+ * FNV-1a 32-bit hash implementation.
+ * Used as the deterministic seed source for bootstrap subsampling.
+ */
 function fnv1a(str: string): number {
   let hash = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {
@@ -580,6 +602,10 @@ function fnv1a(str: string): number {
   return hash >>> 0;
 }
 
+/**
+ * Assigns ranks to an array of values in descending order.
+ * If values are tied, the average rank is assigned to all tied items.
+ */
 function getRanks(values: number[]): number[] {
   const n = values.length;
   const indexed = values.map((val, idx) => ({ val, idx }));
@@ -602,6 +628,10 @@ function getRanks(values: number[]): number[] {
   return ranks;
 }
 
+/**
+ * Calculates Pearson correlation coefficient between two numeric arrays.
+ * Guards against division-by-zero if variance is zero.
+ */
 function pearson(x: number[], y: number[]): number {
   const n = x.length;
   let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
@@ -758,37 +788,54 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
   return { board, radar };
 }
 
+// Snapshot Schema:
+// {
+//   as_of: string (YYYY-MM-DD),
+//   source: string,
+//   floor_usd: number (positive safe integer),
+//   protocols: Array<SnapshotProtocol>,
+//   watchlist: string[]
+// }
 export function parseSnapshot(text: string): Snapshot {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
   } catch {
-    throw new SnapshotError('snapshot.json is not valid JSON');
+    throw new SnapshotError('snapshot.json: invalid JSON');
   }
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-    throw new SnapshotError('snapshot.json is not a JSON object');
+    throw new SnapshotError('snapshot.json: root must be an object');
   }
   const o = raw as Record<string, unknown>;
+
   if (typeof o.as_of !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.as_of)) {
-    throw new SnapshotError('snapshot.json has no valid as_of date');
+    throw new SnapshotError('snapshot.json: as_of must be a YYYY-MM-DD string');
   }
-  if (typeof o.source !== 'string') throw new SnapshotError('snapshot.json has no source');
+  if (typeof o.source !== 'string') {
+    throw new SnapshotError('snapshot.json: source must be a string');
+  }
   if (typeof o.floor_usd !== 'number' || !Number.isSafeInteger(o.floor_usd) || o.floor_usd <= 0) {
-    throw new SnapshotError('snapshot.json has no floor_usd');
+    throw new SnapshotError('snapshot.json: floor_usd must be a positive safe integer');
   }
-  if (!Array.isArray(o.protocols)) throw new SnapshotError('snapshot.json has no protocols array');
+  if (!Array.isArray(o.protocols)) {
+    throw new SnapshotError('snapshot.json: protocols must be an array');
+  }
   if (!Array.isArray(o.watchlist) || o.watchlist.some((s) => typeof s !== 'string')) {
-    throw new SnapshotError('snapshot.json has no watchlist array of strings');
+    throw new SnapshotError('snapshot.json: watchlist must be an array of strings');
   }
 
-  const protocols: SnapshotProtocol[] = o.protocols.map((v, i) => {
+  const protocols: SnapshotProtocol[] = (o.protocols as unknown[]).map((v, i) => {
     if (typeof v !== 'object' || v === null || Array.isArray(v)) {
-      throw new SnapshotError(`snapshot.json protocol ${i} is not an object`);
+      throw new SnapshotError(`snapshot.json: protocols[${i}] must be an object`);
     }
     const p = v as Record<string, unknown>;
-    if (typeof p.slug !== 'string' || typeof p.name !== 'string' || typeof p.tvl_usd !== 'number' || !Number.isFinite(p.tvl_usd)) {
-      throw new SnapshotError(`snapshot.json protocol ${i} lacks slug, name or tvl_usd`);
+
+    if (typeof p.slug !== 'string') throw new SnapshotError(`snapshot.json: protocols[${i}].slug must be a string`);
+    if (typeof p.name !== 'string') throw new SnapshotError(`snapshot.json: protocols[${i}].name must be a string`);
+    if (typeof p.tvl_usd !== 'number' || !Number.isFinite(p.tvl_usd)) {
+      throw new SnapshotError(`snapshot.json: protocols[${i}].tvl_usd must be a finite number`);
     }
+
     return {
       slug: p.slug,
       name: p.name,
@@ -812,51 +859,61 @@ export function parseSnapshot(text: string): Snapshot {
   };
 }
 
+// Board Gate Contract:
+// - 100 <= rows.length <= 4000
+// - All watchlist slugs must be present
+// - Ranks must be exactly 1..N
+// - Implied values must be non-increasing
+// - Implied values must not all be equal
+// - slug: string, 1..128 chars, no whitespace
+// - name: string, non-empty
+// - implied_value_usd: positive safe integer, <= 1e14
+// - farm_steps: Array<string>, length 3..12, each 20..600 chars after trim
 export function boardIssue(board: BoardRow[], snapshot: Snapshot): string | null {
-  if (!Array.isArray(board) || board.length < 100 || board.length > 4000) {
-    return `board has ${board?.length ?? 0} rows; must be between 100 and 4000`;
+  if (!Array.isArray(board)) return 'board must be an array';
+  if (board.length < 100 || board.length > 4000) {
+    return `board has ${board.length} rows; must be 100..4000`;
   }
 
   const slugs = new Set(board.map((r) => r.slug));
-  const missingWatchlist = snapshot.watchlist.filter((s) => !slugs.has(s));
-  if (missingWatchlist.length > 0) {
-    return `board misses ${missingWatchlist.length} watchlist slug(s): ${missingWatchlist.slice(0, 5).join(', ')}`;
+  for (const s of snapshot.watchlist) {
+    if (!slugs.has(s)) return `watchlist slug '${s}' missing from board`;
   }
 
   const ranks = board.map((r) => r.rank).sort((a, b) => a - b);
   for (let i = 0; i < ranks.length; i++) {
-    if (ranks[i] !== i + 1) return `ranks are not 1..N; rank ${i + 1} is ${ranks[i]}`;
+    if (ranks[i] !== i + 1) return `rank mismatch: expected ${i + 1}, found ${ranks[i]}`;
   }
 
   for (let i = 1; i < board.length; i++) {
     if (board[i]!.implied_value_usd > board[i - 1]!.implied_value_usd) {
-      return `row ${i + 1} (${board[i]!.slug}: $${board[i]!.implied_value_usd}) exceeds row ${i} ($${board[i - 1]!.implied_value_usd})`;
+      return `implied_value_usd must be non-increasing: row ${i + 1} (${board[i]!.slug}: $${board[i]!.implied_value_usd}) > row ${i} (${board[i - 1]!.slug}: $${board[i - 1]!.implied_value_usd})`;
     }
   }
 
   if (board.length >= 2 && board[0]!.implied_value_usd === board[board.length - 1]!.implied_value_usd) {
-    return `all ${board.length} rows share the same implied value $${board[0]!.implied_value_usd}`;
+    return `implied_value_usd values must not all be equal ($${board[0]!.implied_value_usd})`;
   }
 
   for (const r of board) {
     if (typeof r.slug !== 'string' || r.slug.length < 1 || r.slug.length > 128 || /\s/.test(r.slug)) {
-      return `row ${r.rank} has invalid slug '${r.slug}'`;
+      return `row ${r.rank} has invalid slug: '${r.slug}'`;
     }
     if (typeof r.name !== 'string' || r.name.length === 0) {
       return `row ${r.rank} (${r.slug}) has empty name`;
     }
     if (!Number.isSafeInteger(r.implied_value_usd) || r.implied_value_usd <= 0 || r.implied_value_usd > 100_000_000_000_000) {
-      return `row ${r.rank} (${r.slug}) has invalid implied_value_usd ${r.implied_value_usd}`;
+      return `row ${r.rank} (${r.slug}) has invalid implied_value_usd: ${r.implied_value_usd}`;
     }
     const steps = r.farm_steps;
     if (!Array.isArray(steps) || steps.length < 3 || steps.length > 12) {
-      return `row ${r.rank} (${r.slug}) has ${steps?.length ?? 0} farm steps; must be 3..12`;
+      return `row ${r.rank} (${r.slug}) has ${steps?.length ?? 0} farm steps (must be 3..12)`;
     }
     for (let sIdx = 0; sIdx < steps.length; sIdx++) {
       const step = steps[sIdx]!;
       const trimmed = step.trim();
       if (trimmed.length < 20 || trimmed.length > 600) {
-        return `row ${r.rank} (${r.slug}) step ${sIdx + 1} has ${trimmed.length} characters; must be 20..600`;
+        return `row ${r.rank} (${r.slug}) step ${sIdx + 1} has ${trimmed.length} characters (must be 20..600)`;
       }
     }
   }
