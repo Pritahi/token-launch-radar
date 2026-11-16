@@ -176,6 +176,7 @@ export function daysSinceListed(asOf: string, listedAt: string | null): number {
   return Math.max(0, Math.floor((a - b) / DAY_MS));
 }
 
+/** Calculates the median of an array of numbers, supporting even-length averaging. */
 function median(arr: number[]): number {
   if (arr.length === 0) return 1;
   const s = [...arr].sort((a, b) => a - b);
@@ -183,6 +184,13 @@ function median(arr: number[]): number {
   return s.length % 2 === 0 ? (s[mid - 1]! + s[mid]!) / 2 : s[mid]!;
 }
 
+/**
+ * Performs a log-log least-squares linear regression (y = bx + a).
+ * Used to model protocol valuation: log10(mcap) = a + b * log10(tvl).
+ * - 'a' represents the intercept (log10 baseline mcap).
+ * - 'b' represents the slope (elasticity of mcap relative to TVL).
+ * Results are bit-identical to the previous implementation.
+ */
 function fitCurve(data: {tvl: number, mcap: number}[]): {a: number, b: number} {
   const n = data.length;
   let sumX = 0;
@@ -246,28 +254,33 @@ export function computeCurves(protocols: SnapshotProtocol[]): {
   return { globalCurve, curveMap };
 }
 
+/** Returns the text description for capital lockup tiers based on protocol TVL. */
 function getCapitalText(tvl: number): string {
   if (tvl >= 1_000_000_000) return '$1,000 - $25,000';
   if (tvl >= 100_000_000) return '$500 - $5,000';
   return '$250 - $1,000';
 }
 
+/** Returns the simplified capital lockup amount (lower bound) based on protocol TVL. */
 function getCapitalSmall(tvl: number): string {
   if (tvl >= 1_000_000_000) return '$1,000';
   if (tvl >= 100_000_000) return '$500';
   return '$250';
 }
 
+/** Returns a string describing the list of supported chains. */
 function getChainsText(chains: string[]): string {
   if (!chains || chains.length === 0) return 'Ethereum';
   if (chains.length <= 3) return chains.join(', ');
   return `${chains.slice(0, 3).join(', ')} and ${chains.length - 3} other chains`;
 }
 
+/** Returns the primary chain for a protocol, defaulting to Ethereum. */
 function getMainChain(chains: string[]): string {
   return chains && chains.length > 0 ? chains[0]! : 'Ethereum';
 }
 
+/** Returns the low and high capital lockup thresholds based on protocol TVL. */
 function getCapitalBands(tvl: number): {low: number, high: number} {
   if (tvl >= 1_000_000_000) return {low: 1000, high: 25000};
   if (tvl >= 100_000_000) return {low: 500, high: 5000};
