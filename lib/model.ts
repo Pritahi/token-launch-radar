@@ -327,125 +327,125 @@ export function farmSteps(p: SnapshotProtocol): string[] {
   const steps: string[] = [];
 
   if (catLower.includes('cex')) {
-    steps.push(`Open ${name} on ${chainsStr}, complete KYC, and deposit ${capSmall} USDC into your account; setup takes ~15 minutes.`);
-    steps.push(`Generate continuous trading volume across spot/futures pairs. Aim for ${capText} in monthly volume across 6 to 10 active trading weeks.`);
-    steps.push(`Maintain an equity balance of ${capText} over 8 consecutive weeks to rank in protocol account tier systems.`);
-    steps.push(`Utilize sub-accounts, API trading, and launchpool deposits to increase active account feature depth.`);
-    steps.push(`Join ${name}'s official Discord, claim verified member badges, and participate in referral campaigns for bonus points.`);
-    steps.push(`Monitor official announcements. Note that ${name} records no token; handle counterparty risk and follow security best practices.`);
+    steps.push(`Create an account on ${name} and complete KYC verification; deposit ${capSmall} in assets to fund your trading account; setup takes approximately 20 minutes.`);
+    steps.push(`Generate trading volume on ${chainsStr} by executing spot or derivatives trades weekly; target ${capText} in monthly volume to demonstrate active usage.`);
+    steps.push(`Maintain a minimum daily account balance of ${capSmall} throughout an 8-week period to qualify for potential loyalty tier rewards.`);
+    steps.push(`Utilize platform features like staking, earn programs, or API trading to expand your account footprint over the active farming period.`);
+    steps.push(`Engage with ${name} on official channels, complete requested community verification tasks, and leverage referral programs for additional point multipliers.`);
+    steps.push(`Track your activity against official protocol updates. Note that ${name} records no token; prioritize account security and understand exchange counterparty risks.`);
   } else if (
     catLower.includes('liquid staking') ||
     catLower.includes('restak') ||
     catLower.includes('staking pool') ||
     catLower.includes('anchor btc')
   ) {
-    steps.push(`Open ${name} on ${chainsStr} and stake ${capSmall} of native assets to receive liquid receipt tokens; setup takes ~10 minutes.`);
-    steps.push(`Hold liquid staked tokens in your non-custodial wallet over 6 to 12 reward epochs (4 to 12 weeks) to accrue baseline yield and points.`);
-    steps.push(`Provide ${capText} of liquid staked token liquidity into partner money markets or liquidity pools on ${mainChain}.`);
-    steps.push(`Participate in periodic restaking cap roll-overs every 1 to 2 weeks to keep wallet activity active.`);
-    steps.push(`Join ${name}'s Discord community, claim testnet/beta badges, and share referral links for extra score multipliers.`);
-    steps.push(`Track accrued reward points and smart-contract slashing risk. Note that ${name} records no token; verify official URLs on official docs.`);
+    steps.push(`Stake ${capSmall} of ${mainChain} native assets into ${name} to receive liquid staking tokens; setup takes 15 minutes on ${mainChain}.`);
+    steps.push(`Hold the received liquid staked tokens in your non-custodial wallet for 8 to 12 weeks to accrue baseline rewards and protocol points.`);
+    steps.push(`Deploy ${capSmall} of your liquid staked tokens into partner lending or DEX protocols on ${chainsStr} to multiply your farming yield.`);
+    steps.push(`Periodically restake or rebalance your position every 2 weeks to ensure your wallet remains flagged as an active participant.`);
+    steps.push(`Participate in ${name}'s governance forums, join the official Discord, and secure any available early-adopter or beta-user roles.`);
+    steps.push(`Monitor smart contract risks and slashing conditions. Note that ${name} records no token; rely only on official documentation for security.`);
   } else if (
     catLower.includes('risk curator') ||
     catLower.includes('allocator') ||
     catLower.includes('collateral') ||
     catLower.includes('cdp manager')
   ) {
-    steps.push(`Open ${name} on ${chainsStr} and deposit ${capSmall} of USDC into its top curated risk vault; setup takes ~15 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Allocate capital across 2 to 3 distinct risk vaults (${capText} total) over 4 to 8 weeks to build deposit history.`);
-    steps.push(`Rebalance or reallocate vault shares on a bi-weekly cadence to demonstrate active portfolio management.`);
-    steps.push(`Supply vault receipt tokens as collateral on partner money markets where supported to stack rewards.`);
-    steps.push(`Participate in curator governance voting proposals and refer active depositors for score multipliers.`);
-    steps.push(`Track smart-contract audit coverage and credit risk. Note that ${name} records no token; check official docs before deploying capital.`);
+    steps.push(`Supply ${capSmall} of stablecoins or collateral assets to ${name} vaults on ${mainChain}; setup takes 15 minutes plus network gas.`);
+    steps.push(`Allocate capital across at least 2 distinct risk-curated vaults (${capText} total) over 8 weeks to build deposit history.`);
+    steps.push(`Rebalance your vault allocations on a bi-weekly basis, demonstrating active management and interaction with the protocol's risk framework.`);
+    steps.push(`If available, use vault receipt tokens as collateral in partner DeFi applications to further leverage your participation.`);
+    steps.push(`Actively participate in the protocol's governance voting and Discord discussions to increase your eligibility for potential future rewards.`);
+    steps.push(`Review audit reports and monitor collateral ratios closely. Note that ${name} records no token; always verify official contract addresses.`);
   } else if (catLower.includes('bridge') || catLower.includes('canonical bridge') || catLower.includes('cross chain')) {
-    steps.push(`Open ${name} on ${chainsStr} and bridge ${capSmall} of USDC from ${mainChain}; setup takes ~10 minutes plus ~$2 gas.`);
-    steps.push(`Execute 1 to 2 cross-chain bridge transactions weekly across supported routes over 6 to 10 weeks.`);
-    steps.push(`Accumulate over ${capText} in total cumulative bridge volume across at least 4 destination networks.`);
-    steps.push(`Provide ${capSmall} to ${name}'s bridge liquidity pools if available to earn LP fees and bridge points.`);
-    steps.push(`Claim community Discord roles, complete testnet bridge tasks, and share referral links for volume bonuses.`);
-    steps.push(`Verify message relay status on block explorers. Note that ${name} records no token; manage cross-chain contract risk carefully.`);
+    steps.push(`Connect your wallet to ${name} on ${mainChain} and bridge ${capSmall} of assets to a supported destination chain; setup takes 10 minutes.`);
+    steps.push(`Execute at least 2 cross-chain bridge transactions per week across diverse routes for 8 weeks, targeting ${capText} in total cumulative volume.`);
+    steps.push(`Deposit ${capSmall} of idle assets into ${name}'s liquidity pools to earn fees and accumulate additional protocol interaction points.`);
+    steps.push(`Maintain a frequent bridge cadence to avoid being flagged as a one-time user during potential snapshot evaluations.`);
+    steps.push(`Join ${name}'s official community, complete bridge quest campaigns, and utilize referral codes to increase your account's visibility.`);
+    steps.push(`Verify transaction success on block explorers and monitor bridge security. Note that ${name} records no token; manage cross-chain risks wisely.`);
   } else if (
     catLower.includes('dex') ||
     catLower.includes('derivative') ||
     catLower.includes('option') ||
     catLower.includes('synthetic')
   ) {
-    steps.push(`Open ${name} on ${chainsStr} and execute an initial trade or liquidity deposit of ${capSmall}; setup takes ~10 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Generate active trading volume by executing 2 to 4 swaps or trades weekly over 6 to 12 weeks, aiming for ${capText} cumulative volume.`);
-    steps.push(`Provide ${capText} of liquidity to top pools on ${name} for at least 30 days to earn trading fees and LP loyalty points.`);
-    steps.push(`Utilize advanced feature orders like limit orders or perps leverage to build comprehensive interaction history.`);
-    steps.push(`Claim testnet/beta badges, join the official Discord server, and participate in referral programs for extra boosters.`);
-    steps.push(`Monitor slippage, impermanent loss, and liquidation risk. Note that ${name} records no token; verify official contract addresses.`);
+    steps.push(`Deposit ${capSmall} of assets into ${name} on ${chainsStr} and execute your first trade or liquidity provision; setup takes 15 minutes.`);
+    steps.push(`Generate ${capText} in trading volume by executing multiple swaps or leveraged trades weekly over 8 to 12 weeks of active use.`);
+    steps.push(`Provide ${capSmall} of liquidity to the protocol's top pools to earn fees and secure long-term participation status.`);
+    steps.push(`Experiment with advanced trading features, such as limit orders or perps, to maximize protocol interaction breadth.`);
+    steps.push(`Participate in trading competitions, join the official Discord server, and claim any available early-access or community badges.`);
+    steps.push(`Monitor liquidation risks and impermanent loss. Note that ${name} records no token; verify official URLs before trading.`);
   } else if (catLower.includes('yield') || catLower.includes('farm') || catLower.includes('algo-stable')) {
-    steps.push(`Open ${name} on ${chainsStr} and deposit ${capSmall} of USDC into an auto-compounding strategy pool; setup takes ~15 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Maintain active strategy deposits over 6 to 10 weeks to maximize compounding efficiency and loyalty multipliers.`);
-    steps.push(`Rotate or expand deposits across 2 or more yield vaults (${capText} total) to increase smart contract interaction count.`);
-    steps.push(`Claim or harvest yields every 1 to 2 weeks to maintain regular transaction cadence on ${mainChain}.`);
-    steps.push(`Complete community quests, collect Discord roles, and engage in governance discussions for point boosts.`);
-    steps.push(`Review strategy audit reports and withdrawal fee terms. Note that ${name} records no token; verify official dapp links.`);
+    steps.push(`Deposit ${capSmall} of assets into an auto-compounding vault on ${name} on ${chainsStr}; setup takes 15 minutes plus gas fees.`);
+    steps.push(`Maintain your active deposits over 8 to 12 weeks to compound yields and maximize eligibility for potential loyalty rewards.`);
+    steps.push(`Diversify your deposits across 2 or more yield strategies (${capText} total) to build a robust interaction profile with the protocol.`);
+    steps.push(`Harvest rewards periodically to maintain regular transaction activity, ensuring you aren't perceived as inactive.`);
+    steps.push(`Join the community quests, engage in governance votes, and collect any available Discord roles to boost your participation profile.`);
+    steps.push(`Review strategy audits and withdrawal fee structures. Note that ${name} records no token; always use official dapp interfaces.`);
   } else if (catLower.includes('rwa') || catLower.includes('stablecoin') || catLower.includes('card')) {
-    steps.push(`Open ${name} on ${chainsStr} and mint or deposit ${capSmall} of tokenized real-world assets; setup takes ~20 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Hold tokenized RWA assets in your wallet for 8 to 12 weeks to qualify for protocol yield distributions and snapshot eligibility.`);
-    steps.push(`Utilize RWA tokens within partner DeFi lending or liquidity pools (${capText}) to boost capital efficiency.`);
-    steps.push(`Execute monthly re-balancing or yield collection transactions over 8 to 12 weeks to maintain active wallet status.`);
-    steps.push(`Join official governance forums, obtain verified user roles, and participate in referral campaigns.`);
-    steps.push(`Understand legal structures and redemption timelines. Note that ${name} records no token; review official disclosures.`);
+    steps.push(`Mint or purchase ${capSmall} of tokenized assets on ${name} on ${chainsStr}; setup takes 20 minutes including KYC if required.`);
+    steps.push(`Hold the tokenized assets in your wallet for 8 to 12 weeks to demonstrate commitment to the protocol's core utility.`);
+    steps.push(`Utilize your tokenized assets in partner DeFi lending or collateral markets (${capText}) to increase protocol utility usage.`);
+    steps.push(`Perform monthly rebalancing or yield claiming actions to maintain an active, long-term interaction record.`);
+    steps.push(`Participate in protocol community calls, join the Discord, and verify your account status for loyalty programs.`);
+    steps.push(`Understand the legal backing and redemption process. Note that ${name} records no token; review official disclosures thoroughly.`);
   } else if (catLower.includes('lend') || catLower.includes('cdp') || catLower.includes('uncollateralized')) {
-    steps.push(`Open ${name} on ${chainsStr} and supply ${capSmall} of USDC into its top lending market; setup takes ~15 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Borrow a conservative ${capSmall} against your collateral (maintaining Health Factor > 2.0) over 6 to 10 weeks.`);
-    steps.push(`Repay and re-borrow small amounts on a bi-weekly cadence to generate regular protocol interaction records.`);
-    steps.push(`Deposit borrowed assets into partner liquidity pools (${capText}) to stack yield and protocol points.`);
-    steps.push(`Participate in governance parameter votes and collect community Discord roles for score multipliers.`);
-    steps.push(`Monitor liquidation thresholds and interest rate shifts. Note that ${name} records no token; verify contract security.`);
+    steps.push(`Supply ${capSmall} of assets into ${name} on ${chainsStr} to activate your lending account; setup takes 15 minutes on ${mainChain}.`);
+    steps.push(`Borrow a conservative amount (e.g., 30% LTV) against your collateral over 8 weeks, monitoring your health factor regularly.`);
+    steps.push(`Repay and re-borrow small amounts bi-weekly to maintain a consistent transaction cadence and demonstrate active management.`);
+    steps.push(`Deposit borrowed funds into partner liquidity protocols (${capText}) to multiply your exposure and participation metrics.`);
+    steps.push(`Vote in protocol governance proposals and contribute to discussions on the Discord to strengthen your user profile.`);
+    steps.push(`Monitor health factors closely to avoid liquidation. Note that ${name} records no token; ensure all contracts are legitimate.`);
   } else if (catLower.includes('basis trading')) {
-    steps.push(`Open ${name} on ${chainsStr} and execute an initial delta-neutral basis position of ${capSmall}; setup takes ~15 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Hold basis trade positions through funding rate cycles over 4 to 8 weeks to capture yield and accrue protocol points.`);
-    steps.push(`Adjust position collateral or leverage parameters every 1 to 2 weeks (${capText} range) to maintain optimal active status.`);
-    steps.push(`Reinvest funding yields back into basis strategy vaults to compound yield and points accumulation.`);
-    steps.push(`Engage with Discord governance channels, track yield leaderboards, and use referral links for score boosts.`);
-    steps.push(`Manage liquidation risk during volatile market swings. Note that ${name} records no token; check official risk docs.`);
+    steps.push(`Execute an initial delta-neutral basis position of ${capSmall} on ${name} on ${chainsStr}; setup takes 15 minutes plus gas.`);
+    steps.push(`Maintain your basis positions through funding rate cycles over 8 weeks to capture sustainable yield and earn protocol points.`);
+    steps.push(`Adjust position collateral or leverage settings (${capText} range) every 2 weeks to demonstrate active protocol management.`);
+    steps.push(`Reinvest earned funding yields back into the strategy to accelerate point accumulation and compounding.`);
+    steps.push(`Engage in governance voting and join Discord channels to track yield leaderboards and verify participation status.`);
+    steps.push(`Actively manage liquidation risks during volatile market periods. Note that ${name} records no token; check official risk documentation.`);
   } else if (catLower.includes('chain') || catLower.includes('cedefi')) {
-    steps.push(`Open ${name} on ${chainsStr}, bridge ${capSmall} to the network, and execute initial native transactions; setup takes ~15 minutes.`);
-    steps.push(`Deploy transactions across at least 5 distinct dapps on ${name} over 6 to 12 weeks to build ecosystem usage depth.`);
-    steps.push(`Maintain active wallet activity with 2 to 4 transactions weekly, targeting ${capText} in total ecosystem volume.`);
-    steps.push(`Stake native network tokens or provide DEX liquidity (${capSmall}) to support network security.`);
-    steps.push(`Participate in testnet campaigns, claim developer/user badges, and join official ecosystem Discord channels.`);
-    steps.push(`Store wallet credentials safely. Note that ${name} records no token; inspect gas costs and bridge security models.`);
+    steps.push(`Bridge ${capSmall} of assets to ${name} on ${chainsStr} and perform your first native transaction; setup takes 15 minutes.`);
+    steps.push(`Deploy transactions across at least 5 different dapps on the ecosystem over 8 to 12 weeks to build a comprehensive usage history.`);
+    steps.push(`Maintain a frequent wallet activity level of 2 transactions weekly, aiming for ${capText} in total ecosystem volume.`);
+    steps.push(`Stake native network tokens or provide liquidity (${capSmall}) on native DEXs to directly support the network's infrastructure.`);
+    steps.push(`Participate in ecosystem testnet campaigns, claim verified developer or user badges, and join official Discord channels.`);
+    steps.push(`Safeguard your wallet credentials. Note that ${name} records no token; always audit the gas costs and bridge mechanisms used.`);
   } else if (catLower.includes('prediction')) {
-    steps.push(`Open ${name} on ${chainsStr} and place an initial position of ${capSmall} on active outcome markets; setup takes ~15 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Place prediction trades across at least 3 distinct market categories over 6 to 10 weeks (${capText} total volume).`);
-    steps.push(`Provide liquidity to prediction pools (${capSmall}) to earn resolution fees and market maker points.`);
-    steps.push(`Resolve or claim winning market positions on a weekly cadence to build transaction activity metrics.`);
-    steps.push(`Participate in market creation proposals, claim community roles, and share referral links for point bonuses.`);
-    steps.push(`Understand oracle resolution mechanisms. Note that ${name} records no token; verify market terms on official docs.`);
+    steps.push(`Place an initial prediction market position of ${capSmall} on ${name} on ${chainsStr}; setup takes 15 minutes plus gas fees.`);
+    steps.push(`Execute trades across at least 3 distinct prediction market categories over 8 to 10 weeks, aiming for ${capText} total volume.`);
+    steps.push(`Supply ${capSmall} of liquidity to prediction pools to earn resolution fees and boost your market participant score.`);
+    steps.push(`Resolve or claim positions on a weekly cadence to ensure a regular and verifiable transaction activity record.`);
+    steps.push(`Propose new markets, claim community roles on Discord, and utilize referral links to increase participation visibility.`);
+    steps.push(`Understand the protocol's oracle resolution mechanism. Note that ${name} records no token; verify market terms on official docs.`);
   } else if (catLower.includes('liquidity manager')) {
-    steps.push(`Open ${name} on ${chainsStr} and deposit ${capSmall} into a concentrated liquidity management vault; setup takes ~15 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Keep liquidity deployed in active rebalancing strategies over 6 to 10 weeks to earn fees and manager points.`);
-    steps.push(`Rebalance or switch vault strategy ranges every 2 weeks (${capText} total) to generate protocol smart-contract interactions.`);
-    steps.push(`Stake vault LP tokens into secondary reward gauges where available to stack yield rewards.`);
-    steps.push(`Join Discord for strategy updates, participate in vault parameter voting, and check for loyalty boosters.`);
-    steps.push(`Monitor range out-of-bound risks and impermanent loss. Note that ${name} records no token; verify official audit links.`);
+    steps.push(`Deposit ${capSmall} into a concentrated liquidity vault on ${name} on ${chainsStr}; setup takes 15 minutes plus network gas.`);
+    steps.push(`Keep your liquidity active in optimized strategies over 8 to 12 weeks to earn trading fees and protocol loyalty points.`);
+    steps.push(`Rebalance or swap vault strategies every 2 weeks (${capText} total volume) to generate smart contract interaction records.`);
+    steps.push(`Stake your vault LP tokens into available reward gauges to amplify your yield and interaction profile.`);
+    steps.push(`Engage with the community on Discord, vote on strategy parameters, and participate in loyalty booster campaigns.`);
+    steps.push(`Monitor rebalancing efficiency and impermanent loss. Note that ${name} records no token; always verify the official audit links.`);
   } else if (catLower.includes('indexes')) {
-    steps.push(`Open ${name} on ${chainsStr} and mint or purchase ${capSmall} of index basket tokens; setup takes ~10 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Hold index basket tokens in your wallet over 6 to 12 weeks to qualify for streaming fee rebates and points.`);
-    steps.push(`Stake index tokens into governance or liquidity pools (${capText}) to amplify reward accumulation.`);
-    steps.push(`Execute periodic index re-balancing or mint/redeem actions every 2 to 3 weeks to maintain active account status.`);
-    steps.push(`Participate in index inclusion proposals, join Discord, and utilize referral links for bonus points.`);
-    steps.push(`Review index asset weightings and underlying liquidity. Note that ${name} records no token; verify contract addresses.`);
+    steps.push(`Purchase or mint ${capSmall} of index basket tokens on ${name} on ${chainsStr}; setup takes 10 minutes plus gas.`);
+    steps.push(`Hold index tokens in your non-custodial wallet for 8 to 12 weeks to qualify for protocol-level rewards and points.`);
+    steps.push(`Stake index tokens into governance or liquidity modules (${capText}) to earn additional yield and protocol rewards.`);
+    steps.push(`Execute periodic re-balancing or mint-redeem actions every 3 weeks to demonstrate active account management.`);
+    steps.push(`Join the community governance forums, engage on Discord, and use referral links to enhance your points accumulation.`);
+    steps.push(`Review underlying asset weightings and index composition regularly. Note that ${name} records no token; verify all contract addresses.`);
   } else if (catLower.includes('privacy')) {
-    steps.push(`Open ${name} on ${chainsStr} and execute an initial shielded deposit of ${capSmall}; setup takes ~15 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Perform 1 to 2 private transfers or proof generations weekly over 6 to 10 weeks (${capText} volume).`);
-    steps.push(`Maintain a shielded pool balance between ${capSmall} and ${capText} to earn privacy liquidity incentives.`);
-    steps.push(`Test private swap or private messaging features to increase protocol feature interaction breadth.`);
-    steps.push(`Obtain verified Discord roles, participate in privacy research discussions, and check for testnet streaks.`);
-    steps.push(`Ensure compliance with local regulations. Note that ${name} records no token; check official docs for ZK safety instructions.`);
+    steps.push(`Execute an initial shielded deposit of ${capSmall} into ${name} on ${chainsStr}; setup takes 15 minutes plus gas.`);
+    steps.push(`Perform at least 2 private transfers or proof generations weekly over 8 to 10 weeks, aiming for ${capText} volume.`);
+    steps.push(`Maintain a shielded balance between ${capSmall} and ${capText} to qualify for ongoing privacy liquidity incentives.`);
+    steps.push(`Interact with private swap or messaging features to ensure a diverse and robust protocol interaction history.`);
+    steps.push(`Claim verified Discord roles, participate in privacy research discussions, and maintain streaks for testnet activity.`);
+    steps.push(`Follow local compliance guidelines. Note that ${name} records no token; always check official documentation for ZK safety instructions.`);
   } else {
-    steps.push(`Open ${name} on ${chainsStr} and execute an initial deposit or transaction of ${capSmall}; setup takes ~15 minutes plus ~$2 gas on ${mainChain}.`);
-    steps.push(`Maintain active protocol interaction with 1 to 2 qualifying transactions weekly over 6 to 10 weeks.`);
-    steps.push(`Allocate ${capText} across core protocol pools or vaults to build a substantial deposit footprint.`);
-    steps.push(`Interact with secondary features such as governance voting, staking, or fee claims on a regular cadence.`);
-    steps.push(`Join ${name}'s official Discord server, claim community member badges, and share referral links for score multipliers.`);
-    steps.push(`Review smart-contract audits and risk disclosures. Note that ${name} records no token; verify official dapp links.`);
+    steps.push(`Execute an initial deposit or transaction of ${capSmall} on ${name} on ${chainsStr}; setup takes 15 minutes plus gas fees.`);
+    steps.push(`Maintain active protocol usage by conducting at least 2 qualifying transactions weekly over 8 to 10 weeks.`);
+    steps.push(`Allocate ${capText} across core protocol pools or vaults to build a substantial and verifiable deposit footprint.`);
+    steps.push(`Interact with secondary protocol features like governance, staking, or fee claiming on a regular weekly cadence.`);
+    steps.push(`Join ${name}'s official community Discord, claim member badges, and leverage referral programs for point multipliers.`);
+    steps.push(`Review protocol audits and risk disclosures regularly. Note that ${name} records no token; always use official dapp interfaces.`);
   }
 
   return steps.map((s) => s.trim());
