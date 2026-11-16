@@ -157,13 +157,25 @@
       '<div id="f-sort-caption" style="margin-top:4px;font-size:0.9em;color:#888;"></div>' +
       '</div>';
 
+    var topEV = D.rows.slice().sort(SORTS.net_ev_usd).slice(0, 5);
+    var evPanel = '<div class="panel"><h3>Top net-EV opportunities</h3><div class="ev-cards">' +
+      topEV.map(function(r) {
+        var fc = r.farm_cost || {};
+        return '<a href="#/protocol/' + esc(r.slug) + '" class="panel ev-card">' +
+          '<div class="s-label">#' + r.rank + '</div>' +
+          '<div class="name">' + esc(r.name) + '</div>' +
+          '<div class="ev-pos" style="font-size:18px;font-family:var(--mono);font-weight:600;">' + fmtUSD(r.net_ev_usd) + '</div>' +
+          '<div class="s-label">cost $' + Math.round(fc.total_usd || 0) + ' - share $' + Math.round(r.est_farmer_airdrop_usd || 0) + '</div>' +
+          '</a>';
+      }).join('') + '</div></div>';
+
     var wl = D.rows.filter(function(r) { return r.watchlist; }).sort(function(a,b) { return a.rank - b.rank; });
     var wlPanel = '<div class="panel"><h3>Watchlist (' + D.watchlist_size + ')</h3><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">' +
       wl.map(function(r) {
         return '<a href="#/protocol/' + esc(r.slug) + '" class="mini-chip">' + esc(r.name) + ' #' + r.rank + '</a>';
       }).join('') + '</div></div>';
 
-    view.innerHTML = kpis + filters + wlPanel + '<div class="tablewrap"><table class="board"><thead><tr>' +
+    view.innerHTML = kpis + filters + evPanel + wlPanel + '<div class="tablewrap"><table class="board"><thead><tr>' +
       '<th data-sort="rank" class="num">#</th>' +
       '<th data-sort="name">Protocol</th>' +
       '<th data-sort="category">Category</th>' +
@@ -396,8 +408,8 @@
       '<ul><li>Fit count: ' + bt.fit_count + '</li>' +
       '<li>Test count: ' + bt.test_count + '</li>' +
       '<li>Median abs log10 error: ' + bt.median_abs_log10_error.toFixed(3) + '</li>' +
-      '<li>Within 2x: ' + (bt.within_2x_pct * 100).toFixed(1) + '%</li>' +
-      '<li>Within 5x: ' + (bt.within_5x_pct * 100).toFixed(1) + '%</li></ul></div>' +
+      '<li>Within 2x: ' + bt.within_2x_pct.toFixed(1) + '%</li>' +
+      '<li>Within 5x: ' + bt.within_5x_pct.toFixed(1) + '%</li></ul></div>' +
       '<div class="panel"><h3>Category curves (' + Object.keys(D.category_curves).length + ' categories)</h3>' +
       '<table class="plain"><thead><tr><th>Category</th><th class="num">Examples</th><th class="num">Slope b</th><th class="num">Intercept a</th><th>Basis</th></tr></thead><tbody>' +
       rows + '</tbody></table></div>' +

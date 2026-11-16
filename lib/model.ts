@@ -751,6 +751,7 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
     stats,
     rows: board,
     live,
+    bootstrap,
     backtest,
   };
 

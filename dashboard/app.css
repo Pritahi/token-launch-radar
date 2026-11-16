@@ -69,6 +69,11 @@ table.board tbody tr:focus-visible{outline:2px solid var(--accent);outline-offse
 .conf::before{content:"";width:8px;height:8px;border-radius:50%}
 .conf.high::before{background:var(--accent)} .conf.medium::before{background:var(--amber)} .conf.low::before{background:var(--red)}
 
+.ev-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+.ev-card { padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+.ev-card:hover { border-color: var(--accent); }
+.ev-card .name { font-weight: 600; font-size: 13px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 .hero,.panel{scroll-margin-top:80px}
 .hero{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;margin-bottom:16px}
 .hero .crumbs{margin-bottom:12px;font-size:13px;opacity:.7}
