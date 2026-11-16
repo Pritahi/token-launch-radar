@@ -63,6 +63,7 @@ table.board tbody tr:hover{background:rgba(52,245,162,.07);cursor:pointer;box-sh
 table.board tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 table.board tbody tr:first-child td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
 .pos{color:var(--accent)} .neg{color:var(--red)}
+.ev-pos{color:var(--accent)} .ev-neg{color:var(--amber)}
 .namecell{font-weight:600}
 .wl{font-size:10px;border:1px solid var(--amber);color:var(--amber);border-radius:4px;padding:1px 4px;margin-left:6px;vertical-align:middle}
 .conf{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)}

@@ -108,7 +108,8 @@
     tvl_usd: function (a, b) { return b.tvl_usd - a.tvl_usd; },
     change_7d: function (a, b) { return (b.change_7d || 0) - (a.change_7d || 0); },
     implied_value_usd: function (a, b) { return b.implied_value_usd - a.implied_value_usd; },
-    est_airdrop_usd: function (a, b) { return b.est_airdrop_usd - a.est_airdrop_usd; }
+    est_airdrop_usd: function (a, b) { return b.est_airdrop_usd - a.est_airdrop_usd; },
+    net_ev_usd: function (a, b) { return (b.net_ev_usd || 0) - (a.net_ev_usd || 0); }
   };
 
   function boardState(params) {
@@ -171,6 +172,7 @@
       '<th data-sort="change_7d" class="num">7d</th>' +
       '<th data-sort="implied_value_usd" class="num">Implied value</th>' +
       '<th data-sort="est_airdrop_usd" class="num">Est. airdrop</th>' +
+      '<th data-sort="net_ev_usd" class="num">Net EV</th>' +
       '<th>Confidence</th>' +
       '</tr></thead><tbody id="tbody"></tbody></table></div>';
 
@@ -200,17 +202,18 @@
           '<td title="' + esc((r.chains || []).join(', ')) + '">' + esc(chainsTxt(r)) + '</td>' +
           '<td class="num" title="' + fmtFull(r.tvl_usd) + '">' + fmtUSD(r.tvl_usd) + '</td>' +
           '<td class="num ' + pctClass(r.change_7d) + '">' + fmtPct(r.change_7d) + '</td>' +
-          '<td class="num" title="' + fmtFull(r.implied_value_usd) + '">' + fmtUSD(r.implied_value_usd) + '</td>' +
-          '<td class="num" title="' + fmtFull(r.est_airdrop_usd) + '">' + fmtUSD(r.est_airdrop_usd) + '</td>' +
-          '<td>' + confBadge(r.confidence) + '</td>' +
-          '</tr>';
+           '<td class="num" title="' + fmtFull(r.implied_value_usd) + '">' + fmtUSD(r.implied_value_usd) + '</td>' +
+           '<td class="num" title="' + fmtFull(r.est_airdrop_usd) + '">' + fmtUSD(r.est_airdrop_usd) + '</td>' +
+           '<td class="num ' + (r.net_ev_usd >= 0 ? 'ev-pos' : 'ev-neg') + '" title="' + fmtFull(r.net_ev_usd) + '">' + fmtUSD(r.net_ev_usd) + '</td>' +
+           '<td>' + confBadge(r.confidence) + '</td>' +
+           '</tr>';
       }).join('');
       document.getElementById('tbody').innerHTML = html;
 
       var totalImplied = rows.reduce(function(sum, r) { return sum + (r.implied_value_usd || 0); }, 0);
       document.getElementById('f-count').textContent = rows.length + ' of ' + D.rows.length + ' - ' + fmtUSD(totalImplied) + ' shown';
 
-      var colNames = { rank: 'rank', name: 'protocol name', category: 'category', tvl_usd: 'TVL', change_7d: '7d change', implied_value_usd: 'implied value', est_airdrop_usd: 'est. airdrop' };
+      var colNames = { rank: 'rank', name: 'protocol name', category: 'category', tvl_usd: 'TVL', change_7d: '7d change', implied_value_usd: 'implied value', est_airdrop_usd: 'est. airdrop', net_ev_usd: 'Net EV' };
       var sortDir = '';
       if (['rank', 'name', 'category'].indexOf(st.sort) >= 0) {
         sortDir = (st.dir === 'desc' ? 'descending' : 'ascending');
@@ -241,9 +244,9 @@
     document.getElementById('f-reset').addEventListener('click', function () { location.hash = '#/board'; });
     document.getElementById('f-csv').addEventListener('click', function () {
       var rows = currentRows();
-      var csv = 'rank,name,slug,category,chains,tvl_usd,change_7d,implied_value_usd,est_airdrop_usd,confidence,watchlist\n';
+      var csv = 'rank,name,slug,category,chains,tvl_usd,change_7d,implied_value_usd,est_airdrop_usd,confidence,watchlist,net_ev_usd\n';
       csv += rows.map(function(r) {
-        return [r.rank, '"' + r.name + '"', r.slug, '"' + (r.category || '') + '"', '"' + (r.chains || []).join('|') + '"', r.tvl_usd, r.change_7d, r.implied_value_usd, r.est_airdrop_usd, r.confidence, r.watchlist ? 1 : 0].join(',');
+        return [r.rank, '"' + r.name + '"', r.slug, '"' + (r.category || '') + '"', '"' + (r.chains || []).join('|') + '"', r.tvl_usd, r.change_7d, r.implied_value_usd, r.est_airdrop_usd, r.confidence, r.watchlist ? 1 : 0, r.net_ev_usd].join(',');
       }).join('\n');
       var blob = new Blob([csv], { type: 'text/csv' });
       var url = URL.createObjectURL(blob);
@@ -313,6 +316,18 @@
       return '<div class="step"><span class="n">' + (idx + 1) + '</span><span class="txt">' + esc(s) + stepChips(s) + '</span></div>';
     }).join('');
 
+    var fc = r.farm_cost || {};
+    var chain = (r.chains && r.chains.length > 0) ? r.chains[0] : 'Multi-chain';
+    var totalTxs = (fc.setup_txs || 0) + (fc.weekly_txs || 0) * (fc.weeks || 0);
+
+    var breakdown = '<div class="panel"><h3>Farm cost breakdown</h3>' +
+        '<p>Gas: ~' + fmtUSD(fc.gas_usd) + ' across ' + totalTxs + ' total txs on ' + esc(chain) + '</p>' +
+        '<p>Time: ~' + (fc.hours || 0) + ' hours valued at $20/hr = ' + fmtUSD(fc.time_usd) + '</p>' +
+        '<p>Capital deployed: ' + fmtUSD(fc.capital_low_usd) + '-' + fmtUSD(fc.capital_high_usd) + ' (not spent)</p>' +
+        '<p>Total cost: ' + fmtUSD(fc.total_usd) + '</p>' +
+        '<p>Net expected value: <span class="' + (r.net_ev_usd >= 0 ? 'ev-pos' : 'ev-neg') + '">' + fmtUSD(r.net_ev_usd) + '</span></p>' +
+        '</div>';
+
     view.innerHTML =
       '<div class="hero">' +
       '<div class="crumbs"><a href="#/board">Board</a> / ' + esc(r.category || '-') + ' / ' + esc(r.slug) + '</div>' +
@@ -323,9 +338,11 @@
       '<div class="big-label">Implied launch value (' + fmtFull(r.implied_value_usd) + ')</div>' +
       '<div class="statgrid">' +
       '<div class="stat"><div class="s-label">TVL</div><div class="s-value">' + fmtUSD(r.tvl_usd) + '</div></div>' +
-      '<div class="stat"><div class="s-label">7d change</div><div class="s-value ' + pctClass(r.change_7d) + '">' + fmtPct(r.change_7d) + '</div></div>' +
-      '<div class="stat"><div class="s-label">Est. airdrop pool (8%)</div><div class="s-value">' + fmtUSD(r.est_airdrop_usd) + '</div></div>' +
-      '<div class="stat"><div class="s-label">Listed</div><div class="s-value">' + esc(r.listed_at || 'unknown') + '</div></div>' +
+       '<div class="stat"><div class="s-label">7d change</div><div class="s-value ' + pctClass(r.change_7d) + '">' + fmtPct(r.change_7d) + '</div></div>' +
+       '<div class="stat"><div class="s-label">Est. airdrop pool (8%)</div><div class="s-value">' + fmtUSD(r.est_airdrop_usd) + '</div></div>' +
+       '<div class="stat"><div class="s-label">Mid-farmer share</div><div class="s-value">' + fmtUSD(r.est_farmer_airdrop_usd) + '</div></div>' +
+       '<div class="stat"><div class="s-label">Net EV after costs</div><div class="s-value ' + (r.net_ev_usd >= 0 ? 'ev-pos' : 'ev-neg') + '">' + fmtUSD(r.net_ev_usd) + '</div></div>' +
+       '<div class="stat"><div class="s-label">Listed</div><div class="s-value">' + esc(r.listed_at || 'unknown') + '</div></div>' +
       '<div class="stat"><div class="s-label">Days tracked, no token</div><div class="s-value">' + fmtDays(r.days_since_listed) + '</div></div>' +
       '<div class="stat"><div class="s-label">Confidence</div><div class="s-value">' + confBadge(r.confidence) + '</div></div>' +
       '</div></div>' +
@@ -337,6 +354,7 @@
       '</div>' +
       '<div class="steps"><h3>Farm plan (' + (r.farm_steps || []).length + ' steps)</h3>' + steps +
       '<p class="note">' + esc(r.name) + ' records no token in the sealed snapshot. Smart-contract risk applies to every step; size positions accordingly.</p></div>' +
+      breakdown +
       '<p class="backrow" style="margin-top:16px"><a href="#/board">Back to the board</a></p>';
   }
 
@@ -354,6 +372,8 @@
     }).join('');
 
     var bt = D.backtest;
+    var stats = D.stats;
+    var boot = D.bootstrap;
     
     view.innerHTML =
       '<div class="panel"><h3>The value model</h3>' +
@@ -362,6 +382,14 @@
       'momentum = 1 + 0.5 × clamp(change_7d, -25, 50) / 100   (range 0.875-1.25)\n' +
       'age_boost = 1 + 0.5 × ln(1 + days_tracked / 365)\n' +
       'est_airdrop = 8% of implied value (farmer cohort share, context only)</div>' +
+      '</div>' +
+      '<div class="panel"><h3>Farm cost model</h3>' +
+      '<p>Gas per tx assumptions (USD): Ethereum 4, Arbitrum 0.15, Base 0.05, Optimism 0.15, BSC 0.1, Polygon 0.05, Solana 0.01, Avalanche 0.1, TON 0.05, default 0.5.</p>' +
+      '<p>Cadence 1-8 txs/week over 8-10 weeks by category, time valued at $20/hr, eligible wallets = clamp(TVL / 20000, 5000, 500000), mid-farmer share = 8% cohort pool / eligible wallets, net EV = share - (gas + time), capital deployed is not spent.</p>' +
+      '<p>Across the board: ' + stats.positive_ev_count + ' of 342 plans are net-positive; median net EV is ' + fmtUSD(stats.median_net_ev_usd) + '.</p>' +
+      '</div>' +
+      '<div class="panel"><h3>Bootstrap stability</h3>' +
+      '<p>We refit the category size curves on ' + boot.samples + ' deterministic 80% subsamples of the calibration protocols (seeded by FNV-1a hashes of protocol slugs, no randomness) and re-rank the full board each time. Spearman rank correlation vs the base ranking: median ' + boot.spearman_median + ', worst ' + boot.spearman_min + '. ' + boot.top20_retention_pct + '% of the base top 20 stay within the bootstrap top 25 on average.</p>' +
       '</div>' +
       '<div class="panel"><h3>Out-of-sample backtest</h3>' +
       '<p>Method: Fit model on data before ' + esc(bt.split_date) + ', test on protocols launched after.</p>' +
